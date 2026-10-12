@@ -1,0 +1,39 @@
+# Entorno de Python (uv lo recrea con `uv sync`)
+.venv/
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+
+# Pruebas y cachés de herramientas
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Compilación LaTeX intermedia (los PDF finales sí se versionan en docs/)
+docs/latex/build/
+*.aux
+*.log
+*.out
+*.toc
+*.synctex.gz
+*.fls
+*.fdb_latexmk
+
+# Node (solo se usa para las pruebas de paridad, sin dependencias)
+node_modules/
+
+# Editores y sistema operativo
+.vscode/
+.idea/
+*.swp
+*~
+.DS_Store
+Thumbs.db
+
+# Variables de entorno locales
+.env
+.env.*

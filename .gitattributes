@@ -1,0 +1,15 @@
+# Finales de línea LF en todos los archivos de texto
+* text=auto eol=lf
+
+# Binarios: sin diffs de texto ni conversión de finales de línea
+*.png binary
+*.jpg binary
+*.pdf binary
+*.stl binary
+
+# Estadísticas de lenguajes de GitHub: ignorar código de terceros y archivos generados
+visualizador_3d/js/vendor/** linguist-vendored
+docs/latex/generado/** linguist-generated
+simulacion/graficas/** linguist-generated
+cad_3d/stl/** linguist-generated
+uv.lock linguist-generated
