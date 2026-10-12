@@ -107,7 +107,7 @@ Parámetros sugeridos: PLA o PETG, 0.2 mm de capa, 4 perímetros, 40 % de rellen
 ### Fase 1: Bobinas y estator
 
 1. **Montar el carrete**: atornille `carrete_base` y `carrete_tapa` con un perno M8 y tuerca. Cubra el núcleo con una vuelta de cinta de teflón o papel encerado para que la bobina no se pegue.
-2. **Bobinar**: deje 6 cm de alambre libre (inicio). Enrolle **180 espiras** ordenadas y apretadas (puede usar un taladro a baja velocidad contando vueltas). La ventana del carrete admite como máximo ~230 espiras de AWG 26; con 180 la ocupación es del 78 %. Deje 6 cm al final.
+2. **Bobinar**: deje 6 cm de alambre libre (inicio). Enrolle **180 espiras** ordenadas y apretadas (puede usar un taladro a baja velocidad contando vueltas). La ventana del carrete admite ~230 espiras de AWG 26 como límite físico y unas 197 en la práctica (ocupación 0.85); con 180 la ocupación es del 78 %. Deje 6 cm al final.
 3. **Fijar y extraer**: impregne con unas gotas de cianoacrilato o barniz, espere a que seque, retire la tapa y saque la bobina.
 4. **Marcar**: marque el **inicio (I)** y el **final (F)** de cada bobina. Repita hasta tener 8 bobinas idénticas. Mida cada una: ≈ 1.5 Ω.
 5. **Colocar en el estator**: pegue cada bobina con epoxi en su alojamiento del disco estator, **todas con la misma cara hacia arriba** (así todas quedan enrolladas en el mismo sentido).
@@ -169,7 +169,7 @@ Parámetros sugeridos: PLA o PETG, 0.2 mm de capa, 4 perímetros, 40 % de rellen
                     │   ┌──────────────┐     ┌──────────────┐    Fusible 15A   ┌──────────────┐             │
                     │   │              │ (+) │              │(+)    ──[===]──  │(+)           │(+)          │
     (+) V_DC ───────┼──►│ Controlador  ├────►│ Diodo Bloqueo├─────────────────►│              ├───────┐     │
- (del puente)       │   │ DC-DC Boost  │     │ o Relé Corte │                  │ Batería 12V  │       │     │
+ (del puente)       │   │  Buck-Boost  │     │ o Relé Corte │                  │ Batería 12V  │       │     │
                     │   │ (CC/CV-MPPT) │ (−) │              │(−)               │ (SLA/LiFePO4)│       │     │
     (−) GND ────────┼──►│              ├─────┴──────────────┴─────────────────►│(−)           │       │     │
                     │   └──────────────┘                                       └──────────────┘       │     │
@@ -198,7 +198,7 @@ Parámetros sugeridos: PLA o PETG, 0.2 mm de capa, 4 perímetros, 40 % de rellen
 1. **Ajuste del Controlador DC-DC (buck-boost CC/CV)**:
    - Conecte una fuente de laboratorio de 12 V a la entrada (sin batería en la salida). Con el multímetro en la salida, ajuste el potenciómetro de tensión (CV) a **14.4 V** (absorción, plomo-ácido) o **14.6 V** (LiFePO4).
    - Cortocircuite la salida a través del amperímetro y ajuste el potenciómetro de corriente (CC) a **3 A** como máximo (≈ 0.4 C para 7 Ah).
-   - *Por qué*: el generador tiene $R_{int} pprox 12\,\Omega$. Un elevador de tensión fija (sin MPPT ni límite) intenta sacar más corriente de la que el generador puede dar, su entrada colapsa y deja de cargar. El modelo supone que el controlador trabaja cerca del punto de máxima potencia, $P_{max} = E_{RMS}^2/(4R_{int})$.
+   - *Por qué*: el generador tiene $R_{int} \approx 12\,\Omega$. Un elevador de tensión fija (sin MPPT ni límite) intenta sacar más corriente de la que el generador puede dar, su entrada colapsa y deja de cargar. El modelo supone que el controlador trabaja cerca del punto de máxima potencia, $P_{max} = E_{RMS}^2/(4R_{int})$.
    - Verifique que el módulo posea diodo antirretorno integrado; si no lo tiene, coloque un diodo Schottky (1N5822 o similar de 3A) en serie en la salida (+) para evitar que la batería se descargue hacia el generador cuando este se detenga.
 
 2. **Conexión de la Batería y Protección DC**:
@@ -235,7 +235,7 @@ Valores teóricos calculados por el modelo (`uv run generador-axial reporte`) co
 
 ### B. Ensayos de Carga de Batería (Nodo DC)
 1. Conecte el multímetro en modo amperímetro DC (escala 10 A) en serie entre el controlador de carga y el polo (+) de la batería.
-2. Gire el generador a 400 RPM y luego a 800 RPM.
+2. Gire el generador a 400, 600, 800 y 1000 RPM.
 3. Observe el encendido del LED de carga del controlador y anote:
    - Corriente de inyección ($I_{chg}$): verificar que es positiva y comparar con el modelo (batería al 50 %, $\eta_c = 0.90$):
 
@@ -260,7 +260,7 @@ Valores teóricos calculados por el modelo (`uv run generador-axial reporte`) co
 4. Ponga a girar el generador con el taladro:
    - El generador inyecta potencia al nodo DC reduciendo la descarga neta de la batería (con 15 W: −14.6 W a 600 RPM, −8.4 W a 1200 RPM).
    - **Con 15 W la batería siempre se descarga** dentro del rango del prototipo: el equilibrio exige ≈ 1700 RPM. Con un bombillo de 5 W hay carga neta por encima de ≈ 980 RPM.
-   - Si la batería baja al 20 % de carga (≈ 12.0 V en reposo), el inversor debe cortar; reconecta al 25 %.
+   - El inversor debe cortar cuando la batería se agota. En el modelo ideal el corte está al 20 % de carga (≈ 12.0 V en reposo) y la reconexión al 25 %; un inversor comercial, como el del modelo realista, corta por tensión en bornes (≈ 10.8 V) y reconecta por encima de 12.3 V.
    - Observe la respuesta en el osciloscopio: el canal 1 muestra la onda AC variable del generador y el canal 2 muestra la onda limpia y estable de 110 V / 220 V a 60 Hz.
 
 ### Análisis de discrepancias
@@ -269,4 +269,5 @@ Valores teóricos calculados por el modelo (`uv run generador-axial reporte`) co
 3. **Factor de acoplamiento**: si las tensiones medidas son sistemáticamente menores, estime el $k$ real como $k_{real} = 0.85 \cdot V_{medido}/V_{teórico}$.
 4. **Eficiencia del inversor**: las pérdidas en el transformador elevador y los MOSFETs implican que $P_{in\_DC} = P_{AC} / \eta_{inv}$ ($\eta_{inv} \approx 85\% - 90\%$).
 5. **Temperatura**: la resistencia del cobre aumenta ~0.39 %/°C.
+6. **Modelo ideal frente al realista**: las tablas de esta guía salen del modelo ideal. El modelo realista (Documento 5 y visualizador) da valores algo menores, porque la fem real no es senoidal (su valor RMS es 0.93 veces el ideal), el controlador no arranca por debajo de 3.5 V y el inversor consume 3.6 W en vacío. Por ejemplo, con 15 W de carga la batería entrega ≈ 1.48 A en lugar de 1.36 A.
 

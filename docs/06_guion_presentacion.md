@@ -6,11 +6,11 @@ Tiempo planificado: **8:50**, con **1:10 de margen** para transiciones o una pre
 
 ## Antes de empezar
 
-1. Abrir el simulador **antes** de la presentación y dejarlo en pausa en una ventana aparte:
+1. Abrir el simulador **antes** de la presentación en una ventana aparte:
    ```bash
    uv run python visualizador_3d/server.py
    ```
-2. Recargar la página justo antes de presentar para partir del estado inicial (batería al 50 %, carga de 15 W, inversor encendido, tiempo 50×).
+2. Justo antes de presentar, recargar la página para partir del estado inicial (batería al 50 %, carga de 15 W, inversor encendido, tiempo 50×) y pulsar **Pausar**: al recargar, el simulador arranca en marcha.
 3. Tener el PDF en pantalla completa y el simulador a un `Alt+Tab` de distancia.
 4. Si la demo falla, usar la captura de la diapositiva 7 y las cifras de la diapositiva 8.
 
@@ -28,7 +28,7 @@ Tiempo planificado: **8:50**, con **1:10 de margen** para transiciones o una pre
 | 2 | ¿Qué construimos? | 0:45 | 1:00 |
 | 3 | La idea: un imán en movimiento produce electricidad | 1:00 | 2:00 |
 | 4 | El generador por dentro | 0:40 | 2:40 |
-| 5 | Una simulación cercana a la realidad | 0:50 | 3:30 |
+| 5 | Una simulación lo más cercana posible a la realidad | 0:50 | 3:30 |
 | 6 | ¿Por qué confiar en la simulación? | 0:30 | 4:00 |
 | 7 | **Demo en vivo** | 3:30 | 7:30 |
 | 8 | ¿Cuánta energía produce? | 0:50 | 8:20 |

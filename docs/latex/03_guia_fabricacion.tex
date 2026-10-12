@@ -70,7 +70,7 @@ tensión generada es proporcional a la velocidad (comportamiento lineal) y el mo
 \end{tikzpicture}
 \end{center}
 Las fases 1 y 2 son independientes y pueden hacerse en paralelo (por ejemplo, mientras cura el epoxi del rotor
-se bobinan las bobinas).
+se enrollan las bobinas).
 
 %=====================================================================
 \section{Seguridad con imanes de neodimio}
@@ -198,7 +198,7 @@ un contador mecánico. Deje 6 cm al final (\textbf{F}).
 
 La ventana del carrete mide $\frac{\ValDiametroExteriorBobina-\ValDiametroInteriorBobina}{2}\times\ValAlturaBobina
 =\ValVentanaBobinaMM$ mm$^2$; con alambre esmaltado de $\varnothing$\ValDiametroEsmaltado\ mm, \ValEspiras\
-espiras ocupan el \ValOcupacion\ de la ventana (máximo práctico $\approx 230$ espiras).
+espiras ocupan el \ValOcupacion\ de la ventana (máximo práctico $\approx 197$ espiras, con ocupación 0.85).
 \end{paso}
 
 \begin{paso}{Paso 1.3 · Fijar, extraer y marcar}
@@ -483,7 +483,8 @@ entrega cientos de amperios: coloque el fusible pegado al borne positivo antes d
 \begin{paso}{Paso 5.1 · Ajustar el controlador de carga}
 \begin{enumerate}
   \item Alimente la entrada con una fuente de 12 V, sin batería en la salida.
-  \item Ajuste la tensión de salida (potenciómetro CV) a \ValControladorAbsorcion\ V.
+  \item Ajuste la tensión de salida (potenciómetro CV) a \ValControladorAbsorcion\ V. Si el controlador tiene etapa
+        de flotación, ajústela a \ValControladorFlotacion\ V.
   \item Ponga el amperímetro en cortocircuito en la salida y ajuste el límite de corriente (CC) a
         \ValControladorCorrienteMax\ A como máximo.
   \item Si el módulo no tiene diodo antirretorno, coloque un 1N5822 en serie con la salida (+).
@@ -508,7 +509,10 @@ que el controlador trabaja cerca del punto de máxima potencia (Documento~1).
         Es normal una pequeña chispa al cargarse sus condensadores.
   \item En la salida conecte el tomacorriente con un fusible de 1 A en la fase y el bombillo de
         \ValPotenciaCargaAc\ W.
-  \item Configure el corte por baja tensión del inversor, si lo permite, cerca de 12.0 V (\ValSocCorte\,\% de carga).
+  \item Configure el corte por baja tensión del inversor, si lo permite. El modelo ideal corta al \ValSocCorte\,\%
+        de carga (unos 12.0 V en reposo); un inversor comercial mide la tensión en bornes bajo carga, y para él se
+        recomienda el criterio del modelo realista (Documento~5): corte a \ValInversorCorte\ V y reconexión por encima
+        de \ValInversorReconexion\ V.
 \end{enumerate}
 \end{paso}
 
@@ -580,8 +584,8 @@ Al detener el generador la corriente debe caer a cero sin invertirse (diodo anti
         \ValInversorTension–120 V (o \ValInversorTensionAlta–230 V) a \ValInversorFrecuencia\ Hz.
   \item Con el bombillo de \ValPotenciaCargaAc\ W encendido, la batería entrega unos
         \ValCorrienteInversorBateria\ A (\ValPotenciaEntradaInversor\ W).
-  \item Haga girar el generador a \ValRpmMicrored\ RPM: la descarga neta baja a unos
-        \ValPotenciaNetaBateria\ W, pero \textbf{no se invierte}. Con \ValPotenciaCargaAc\ W el equilibrio exigiría
+  \item Haga girar el generador a \ValRpmMicrored\ RPM: el balance neto de la batería mejora
+        hasta unos \ValPotenciaNetaBateria\ W, pero \textbf{sigue siendo negativo}. Con \ValPotenciaCargaAc\ W el equilibrio exigiría
         \ValRpmEquilibrio\ RPM; con un bombillo de \ValPotenciaCargaReducida\ W basta con
         $\approx$\ValRpmEquilibrioReducida\ RPM.
   \item Autonomía esperada desde el \ValSocInicial\,\% hasta el corte: \ValAutonomiaHoras\ h a
@@ -619,7 +623,8 @@ AC correcta pero DC nula & Diodo invertido o abierto en el puente; revise la lis
 El rotor roza o vibra & Cabeceo del eje o estator no paralelo (pasos 3.1 y 3.3).\\
 El LED no enciende a baja velocidad & Normal: necesita $V_{DC}>\ValCaidaLed$ V, es decir, más de unas 100 RPM.\\
 La batería no carga & $V_{DC}<\ValControladorArranque$ V (gire más rápido), fusible abierto o controlador sin límite de corriente que colapsa la entrada.\\
-El inversor se apaga solo & Corte por baja tensión: la batería llegó al \ValSocCorte\,\%. Recárguela hasta el \ValSocReconexion\,\% o más.\\
+El inversor se apaga solo & Corte por baja tensión: la batería se agotó. Recárguela hasta que supere \ValInversorReconexion\ V en reposo
+(unos \ValSocInicial\,\% de carga).\\
 \bottomrule
 \end{tabularx}
 \end{table}

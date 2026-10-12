@@ -59,15 +59,17 @@ teoria_electromagnetica/
 |   |-- rutas.py                # directorios de salida
 |   |-- dominio/                # entidades y leyes físicas (sin E/S)
 |   |   |-- errores.py  componentes.py  mecanica.py  diseno.py  fisica.py
+|   |   |-- realista.py  dinamica.py     # modelo realista (Documento 5)
 |   |-- aplicacion/             # casos de uso
 |   |   |-- simulador.py  piezas.py  reporte.py
+|   |   |-- simulacion_dinamica.py  escenarios_dinamicos.py
 |   |-- infraestructura/        # adaptadores a formatos externos
 |   |   |-- cad/  (malla.py  constructor.py  exportador.py)
-|   |   |-- graficas/  (base.py  catalogo.py)
+|   |   |-- graficas/  (base.py  catalogo.py  realista.py)
 |   |   |-- latex.py
 |   |-- presentacion/           # interfaz de línea de comandos
 |       |-- cli.py  consola.py
-|-- tests/                      # pruebas pytest (138 casos, 29 de interfaz)
+|-- tests/                      # pruebas pytest (109 automáticas + 29 de interfaz)
 |-- simulacion/modelo_analitico.py   # envoltorio: generador-axial simular
 |-- simulacion/graficas/        # PNG generados
 |-- cad_3d/generar_modelos_stl.py    # envoltorio: generador-axial cad
@@ -81,7 +83,7 @@ teoria_electromagnetica/
 |   |-- js/vendor/  (three.min.js  OrbitControls.js)
 |-- docs/
     |-- *.md  *.pdf  compilar_pdf.sh
-    |-- latex/  (fuentes .tex, comun/preambulo.tex, generado/)
+    |-- latex/  (fuentes .tex, comun/preambulo.tex, generado/, figuras/)
 \end{lstlisting}
 
 %=====================================================================
@@ -94,12 +96,12 @@ aislada y reutilizar en cualquier interfaz.
 \begin{figure}[H]
 \centering
 \begin{tikzpicture}[
-  capa/.style={draw=#1,fill=#1!10,minimum width=11cm,minimum height=1.05cm,align=center,font=\small},
+  capa/.style={draw=#1,fill=#1!10,minimum width=12.6cm,minimum height=1.05cm,align=center,font=\small},
   flecha/.style={-{Stealth[length=2.5mm]},thick,Gris}]
   \node[capa=Naranja] (p) {\textbf{Presentación} · \texttt{cli.py}, \texttt{consola.py}\\ \footnotesize comandos de terminal, formato de salida};
   \node[capa=Cian,below=0.45cm of p] (i) {\textbf{Infraestructura} · \texttt{cad/}, \texttt{graficas/}, \texttt{latex.py}\\ \footnotesize STL binario, PNG con matplotlib, macros \LaTeX};
-  \node[capa=Azul,below=0.45cm of i] (a) {\textbf{Aplicación} · \texttt{simulador.py}, \texttt{piezas.py}, \texttt{reporte.py}\\ \footnotesize casos de uso: operar el generador, describir piezas, reportar};
-  \node[capa=Verde,below=0.45cm of a] (d) {\textbf{Dominio} · \texttt{componentes.py}, \texttt{diseno.py}, \texttt{fisica.py}\\ \footnotesize entidades validadas y leyes físicas puras};
+  \node[capa=Azul,below=0.45cm of i] (a) {\textbf{Aplicación} · \texttt{simulador.py}, \texttt{simulacion\_dinamica.py}, \texttt{piezas.py}, \texttt{reporte.py}\\ \footnotesize casos de uso: operar el generador, simular en el tiempo, describir piezas, reportar};
+  \node[capa=Verde,below=0.45cm of a] (d) {\textbf{Dominio} · \texttt{componentes.py}, \texttt{diseno.py}, \texttt{fisica.py}, \texttt{realista.py}, \texttt{dinamica.py}\\ \footnotesize entidades validadas y leyes físicas puras};
   \draw[flecha] (p) -- (i);
   \draw[flecha] (i) -- (a);
   \draw[flecha] (a) -- (d);
@@ -122,6 +124,14 @@ aislada y reutilizar en cualquier interfaz.
   \item \archivo{fisica.py}: funciones puras y vectorizadas con NumPy (campo axial, campo medio, frecuencia,
         fem, rectificación, rizado, corriente en carga, potencia máxima extraíble y corriente de carga de la
         batería). Cada función cita la ecuación del Documento~1.
+  \item \begin{sloppypar}\archivo{realista.py}: el agregado \texttt{ParametrosRealistas} reúne los parámetros
+        inmutables del modelo realista (Documento~5): \texttt{MaterialesRotor}, \texttt{PerdidasMecanicas},
+        \texttt{FuenteMotriz}, \texttt{ModeloTermico}, \texttt{BateriaPlomoAcido}, \texttt{InversorReal},
+        \texttt{ControladorMpptReal} e \texttt{Integracion}.\end{sloppypar}
+  \item \archivo{dinamica.py}: funciones puras del modelo realista: \texttt{perfil\_de\_flujo} (solape
+        imán--espira), inductancia de Wheeler, momento de inercia del rotor, pérdidas de Foucault,
+        potencia DC con reactancia y rizado, tensión de reposo y polarización de la batería, Peukert y consumo del
+        inversor.
 \end{itemize}
 
 \begin{lstlisting}[style=python]
@@ -154,6 +164,12 @@ class Bobina:
         \archivo{simular_bateria(...)} (integración del SoC con corte y reconexión por histéresis) y
         \archivo{forma_de_onda_inversor(...)}, que devuelven \archivo{BalanceMicrored}, \archivo{EvolucionBateria}
         y \archivo{SalidaInversor}.
+  \item \archivo{simulacion_dinamica.py}: \texttt{SimulacionDinamica} integra en el tiempo el rotor, la electrónica,
+        la batería y la temperatura. Recibe \texttt{EntradasDinamicas} (par motriz, carga, inversor, temperatura,
+        condensador, factor de tiempo) y devuelve en cada paso un \texttt{InstanteDinamico} inmutable.
+  \item \archivo{escenarios_dinamicos.py}: guiones reutilizables sobre la simulación dinámica
+        (\texttt{regimen\_permanente}, \texttt{impulso\_y\_frenado} y \texttt{ciclo\_de\_carga}) que alimentan las
+        gráficas y el reporte.
   \item \archivo{piezas.py}: \texttt{catalogo\_de\_piezas(diseno)} es una \emph{fábrica} que traduce el diseño a
         especificaciones geométricas neutras (\texttt{PlacaConAlojamientos}, \texttt{SolidoDeRevolucion}), sin
         saber nada del formato STL.
@@ -169,7 +185,8 @@ class Bobina:
   \item \archivo{cad/malla.py}: \texttt{Malla} sabe unir mallas, calcular normales, su volumen con signo y si es
         hermética (cada arista compartida exactamente por dos triángulos con orientación opuesta).
   \item \archivo{cad/exportador.py}: escribe STL binario con un \texttt{dtype} estructurado de NumPy.
-  \item \archivo{graficas/}: una clase por gráfica sobre la base \texttt{Grafica}.
+  \item \archivo{graficas/}: una clase por gráfica sobre la base \texttt{Grafica}; \archivo{catalogo.py} reúne las
+        ocho del modelo ideal y \archivo{graficas/realista.py} las cuatro del modelo realista.
   \item \archivo{latex.py}: escribe \archivo{valores.tex} (macros \texttt{\textbackslash Val...}) y
         \archivo{tabla_ensayos.tex}.
 \end{itemize}
@@ -311,7 +328,7 @@ cuadro.
         la onda no sufra \emph{aliasing} a altas RPM; CH1 dibuja la forma de onda real (no senoidal) del solape
         imán–bobina. Tiene dos canales: CH1 es el generador y CH2 la
         salida del inversor, con escala de 50, 100 o 200 V/div según la tensión elegida; si el inversor está
-        apagado o cortado muestra ``APAGADO''.
+        apagado o cortado, la etiqueta de escala añade ``apagado''.
   \item \textbf{Estado físico fuera del Observer}: velocidad, SoC y temperatura cambian en cada cuadro, así que viven
         en \texttt{SimulacionDinamica} y no en el estado observable (evita notificar a todas las vistas 60 veces por
         segundo); la aplicación pasa cada instante al panel, a la escena y al osciloscopio.
@@ -343,8 +360,8 @@ cuadro.
 %=====================================================================
 \section{Pruebas automáticas}
 %=====================================================================
-Las pruebas (\archivo{tests/}, 67 casos con \texttt{pytest}) verifican física, reglas de diseño y productos
-generados:
+Las pruebas (\archivo{tests/}) verifican física, reglas de diseño y productos generados: 109 casos se ejecutan con
+\texttt{uv run pytest} y otros 29, marcados como \texttt{interfaz}, recorren el visualizador en Chromium:
 
 \begin{table}[H]
 \centering
@@ -374,6 +391,9 @@ cada subcomando de la CLI.\\
 \archivo{test_paridad_visualizador.py} & Que \archivo{js/config.js} coincida con \archivo{configuracion.py} y que
 \archivo{fisica.js} dé los mismos resultados que Python (tolerancia $10^{-12}$), y que \archivo{dinamica.js}
 reproduzca \texttt{SimulacionDinamica} paso a paso en cuatro guiones (tolerancia $10^{-9}$). Se omite si no hay Node.\\
+\archivo{test_interfaz_visualizador.py} & Pruebas de extremo a extremo con Playwright: controles, pausa, impulso,
+selector de tiempo, ajustes, micro-red, corte del inversor, osciloscopio, ventana aparte y adaptación al tamaño de
+la ventana. Se omiten si Chromium no está instalado.\\
 \bottomrule
 \end{tabularx}
 \end{table}
@@ -402,7 +422,9 @@ Los scripts antiguos siguen funcionando: \texttt{python simulacion/modelo\_anali
 
 \begin{paso}{Paso 3 · Ejecutar las pruebas}
 \begin{lstlisting}[style=consola]
-uv run pytest
+uv run pytest                                    # 109 pruebas automáticas
+uv run --group e2e playwright install chromium   # una sola vez
+uv run --group e2e pytest -m interfaz            # 29 pruebas de la interfaz
 \end{lstlisting}
 \end{paso}
 
@@ -412,6 +434,7 @@ uv run python visualizador_3d/server.py            # ventana propia de 1360x860
 uv run python visualizador_3d/server.py --ventana 1600x1000
 uv run python visualizador_3d/server.py --en-pestana  # pestaña del navegador
 uv run python visualizador_3d/server.py --puerto 9000 --sin-navegador
+uv run python visualizador_3d/server.py --navegador chromium   # navegador concreto
 \end{lstlisting}
 El servidor abre el simulador como ventana de aplicación de Edge, Chrome, Chromium o Brave (sin pestañas ni barra
 de direcciones) con un perfil propio, para que se respete el tamaño. Si no encuentra ninguno, abre una ventana del
@@ -421,7 +444,7 @@ También se puede abrir \archivo{visualizador_3d/index.html} directamente con do
 
 \begin{paso}{Paso 5 · Recompilar los PDF}
 \begin{lstlisting}[style=consola]
-./docs/compilar_pdf.sh                       # los cinco documentos
+./docs/compilar_pdf.sh                       # todos los documentos y la presentación
 ./docs/compilar_pdf.sh 02_memoria_de_calculo # solo uno
 \end{lstlisting}
 El script ejecuta \texttt{generador-axial todo}, compila cada documento dos veces con \texttt{pdflatex} (para el
@@ -478,7 +501,7 @@ Ensayos & Tabla de valores teóricos escrita a mano e inconsistente con el model
 CAD & Carrete de una sola pieza (la bobina no se podía extraer); cotas no ligadas al diseño. & Carrete en dos piezas; discos con alojamientos derivados del diseño; mallas cerradas verificadas.\\
 Visualizador & Código monolítico; la pausa no congelaba el tiempo; geometría distinta del diseño; líneas de campo fijas al cambiar el entrehierro; dependencia de CDN. & MVC + Observer; pausa real; geometría coherente con el CAD; líneas reconstruidas; librerías locales; osciloscopio sin \emph{aliasing}.\\
 Gráficas & Curvas superpuestas por coincidencia de escalas (tensión DC y frecuencia). & Frecuencia en un eje secundario superior.\\
-Herramientas & Scripts sueltos sin dependencias declaradas ni pruebas. & Proyecto \texttt{uv} con \archivo{pyproject.toml}, comando \texttt{generador-axial} y 67 pruebas.\\
+Herramientas & Scripts sueltos sin dependencias declaradas ni pruebas. & Proyecto \texttt{uv} con \archivo{pyproject.toml}, comando \texttt{generador-axial} y 138 pruebas (109 automáticas y 29 de interfaz).\\
 Micro-red: potencia & Se usaba $V_{DC}^2/(4R_{int})$, que duplica la potencia disponible. & $P_{max}=V_{RMS}^2/(4R_{int})$ con controlador MPPT y límites de corriente y absorción.\\
 Micro-red: protección & Sin corte por baja tensión: el inversor daba 110\,V con la batería vacía. & Corte al \ValSocCorte\,\% y reconexión al \ValSocReconexion\,\% en Python y JavaScript.\\
 Micro-red: balance & El balance ignoraba el consumo del inversor; constantes fijas (10.5/14.4\,V, 500\,RPM, 110\,V/60\,Hz) repetidas en el código. & Balance completo con velocidad de equilibrio (\ValRpmEquilibrio\,RPM para \ValPotenciaCargaAc\,W); parámetros en \archivo{configuracion.py} y \archivo{config.js}.\\

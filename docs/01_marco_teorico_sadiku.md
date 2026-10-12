@@ -38,7 +38,7 @@ Las espiras no están en un solo plano: ocupan desde la cara de la bobina ($z = 
 $\int \frac{z+L}{\sqrt{(z+L)^2+R^2}}dz = \sqrt{(z+L)^2+R^2}$ y $\int \frac{z}{\sqrt{z^2+R^2}}dz = \sqrt{z^2+R^2}$:
 $$\bar{B}_z = \frac{B_r}{2h}\Big[F(g+h) - F(g)\Big], \qquad F(z) = \sqrt{(z+L)^2+R^2} - \sqrt{z^2+R^2}$$
 
-Con los datos del prototipo, $B_z(g) = 0.223\,\text{T}$ pero $\bar{B}_z = 0.155\,\text{T}$: evaluar sólo en la cara sobreestimaba la tensión en un 31 %.
+Con los datos del prototipo, $B_z(g) = 0.223\,\text{T}$ pero $\bar{B}_z = 0.155\,\text{T}$: promediar en el espesor reduce el campo (y la tensión) un 31 % respecto de evaluarlo solo en la cara.
 
 ---
 
@@ -104,6 +104,8 @@ $$V_{pico} = N\,\omega_e\,\Phi_{max}, \qquad V_{RMS} = \frac{V_{pico}}{\sqrt{2}}
 Bobinas vecinas ven polos opuestos; conectadas en serie **con polaridad alternada** sus fem se suman:
 $$V_{total}(t) = N_{total}\,\omega_e\,\Phi_{max}\,\sin(\omega_e t), \qquad N_{total} = N_b \cdot N$$
 
+> **Modelo ideal frente al modelo realista.** Las secciones 5 a 10 usan el modelo ideal de régimen permanente (flujo senoidal, batería lineal). El modelo realista del Documento 5, que es el que ejecuta el visualizador, calcula el flujo por el solape imán–espira: la fem resulta no senoidal (factor de cresta 1.335 en lugar de 1.414) y su valor RMS es 0.93 veces el ideal. También añade inercia, rozamiento, inductancia, una batería de plomo-ácido con polarización, un inversor con consumo en vacío y temperatura.
+
 ---
 
 ## 6. ¿Por qué un estator sin núcleo de hierro (coreless)?
@@ -125,8 +127,6 @@ $$V_{total}(t) = N_{total}\,\omega_e\,\Phi_{max}\,\sin(\omega_e t), \qquad N_{to
 
 ---
 
----
-
 ## 8. Almacenamiento Electroquímico y Carga de Baterías
 
 Una batería de ciclo profundo (plomo-ácido regulada por válvula VRLA/AGM o fosfato de hierro y litio $\text{LiFePO}_4$) actúa como amortiguador de energía (*energy buffer*), desacoplando la generación mecánica intermitente del consumo de la carga.
@@ -137,7 +137,7 @@ $$V_{terminal} = E_{oc}(\text{SoC}) + I_{chg} R_{bat}$$
 donde para plomo-ácido de 12 V nominales:
 $$E_{oc}(\text{SoC}) \approx 11.8\,\text{V} + 1.0\,\text{V} \cdot \text{SoC}$$
 - $\text{SoC} = 0\,\%$ (descargada): $E_{oc} \approx 11.8\,\text{V}$.
-- $\text{SoC} = 100\,\%$ (plena carga): $E_{oc} \approx 12.8\,\text{V}$ (en reposo) o hasta $14.4\,\text{V}$ en absorción/flotación.
+- $\text{SoC} = 100\,\%$ (plena carga): $E_{oc} \approx 12.8\,\text{V}$ (en reposo); durante la carga sube hasta $14.4\,\text{V}$ en absorción y se mantiene en $13.8\,\text{V}$ en flotación.
 
 ### 8.2 Dinámica de carga en el tiempo
 La corriente de carga $I_{chg}(t)$ incrementa la carga acumulada $Q(t)$:
@@ -210,6 +210,8 @@ $$P_{neto\_bat}(t) = P_{in\_chg}(t) - P_{out\_inv}(t)$$
 - A 600 RPM el generador entrega $2.07\,\text{W}$ a la batería (168 mA), mientras que un bombillo de 15 W exige $16.67\,\text{W}$ al inversor: la batería pierde $14.6\,\text{W}$ y llega al corte en unas 1.7 h (1.5 h con el generador parado).
 - Para sostener 15 W sin descargar la batería haría falta girar a unas **1700 RPM**, por encima del rango del prototipo (1200 RPM). Una carga de 5 W se equilibra a unas 980 RPM.
 - Conclusión: este generador de laboratorio **recarga** la batería; la potencia de 110 V / 220 V la aporta la batería, no el generador en tiempo real.
+
+En el modelo realista (Documento 5 y visualizador) el inversor consume 3.6 W en vacío, de modo que el bombillo de 15 W exige unos 18.7 W a la batería; además, el corte se hace por tensión en bornes (10.8 V) y la reconexión a 12.3 V, como en un inversor comercial.
 
 ---
 

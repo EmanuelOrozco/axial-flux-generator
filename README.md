@@ -47,7 +47,7 @@ teoria_electromagnetica/
 
 ## Inicio rápido
 
-Requiere [uv](https://docs.astral.sh/uv/) y Python 3.12+.
+Requiere [uv](https://docs.astral.sh/uv/) y Python 3.11+.
 
 ```bash
 uv sync                           # Instala dependencias en .venv
@@ -57,7 +57,7 @@ uv run generador-axial reporte    # Genera macros LaTeX en docs/latex/generado/
 uv run generador-axial todo       # Ejecuta simulación, CAD y reporte en un solo comando
 uv run pytest                     # Ejecuta las 109 pruebas automáticas (física ideal y realista, CAD, paridad JS)
 uv run --group e2e playwright install chromium   # Una sola vez: navegador para las pruebas de interfaz
-uv run --group e2e pytest -m interfaz            # 29 pruebas de la interfaz en Chromium (≈14 min con WebGL por software)
+uv run --group e2e pytest -m interfaz            # 29 pruebas de la interfaz en Chromium (≈11 min con WebGL por software)
 ```
 
 ### Visualizador 3D Computacional
@@ -78,12 +78,14 @@ uv run python visualizador_3d/server.py                          # Abre el simul
 uv run python visualizador_3d/server.py --ventana 1600x1000      # Otro tamaño de ventana
 uv run python visualizador_3d/server.py --en-pestana             # En una pestaña del navegador
 uv run python visualizador_3d/server.py --puerto 9000 --sin-navegador
+uv run python visualizador_3d/server.py --navegador chromium     # Usar un navegador Chromium concreto
 ```
 
 ### Documentos PDF
 
 ```bash
-./docs/compilar_pdf.sh                        # Compila los documentos PDF
+./docs/compilar_pdf.sh                        # Compila los cinco documentos y la presentación
+./docs/compilar_pdf.sh 06_presentacion        # Compila solo uno
 ```
 *(Requiere `pdflatex` con paquetes `circuitikz`, `tcolorbox` y `siunitx`)*.
 
