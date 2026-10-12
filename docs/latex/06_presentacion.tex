@@ -1,4 +1,4 @@
-% Presentación de 10 minutos (incluye la demostración en vivo del simulador).
+% Presentación de 10 minutos para público general (incluye la demostración en vivo del simulador).
 % Compilar con: ./docs/compilar_pdf.sh 06_presentacion
 \documentclass[aspectratio=169,11pt,xcolor={dvipsnames,table}]{beamer}
 \usepackage[utf8]{inputenc}
@@ -10,6 +10,7 @@
 \sisetup{output-decimal-marker={.},group-digits=false,per-mode=symbol}
 \usepackage{booktabs}
 \usepackage{tikz}
+\usepackage{tcolorbox}
 \usetikzlibrary{arrows.meta,positioning,calc}
 
 \graphicspath{{../../simulacion/graficas/}{figuras/}}
@@ -22,6 +23,7 @@
 \definecolor{Rojo}{HTML}{C62828}
 \definecolor{Verde}{HTML}{2E7D32}
 \definecolor{Gris}{HTML}{455A64}
+\definecolor{Cobre}{HTML}{B87333}
 
 \usefonttheme{professionalfonts}
 \setbeamercolor{frametitle}{fg=Azul}
@@ -38,14 +40,14 @@
 \setbeamertemplate{blocks}[rounded]
 \setbeamertemplate{footline}{%
   \leavevmode\hbox to\paperwidth{%
-    \hspace{1em}{\color{Gris}\tiny Generador de flujo axial con imanes NdFeB}\hfill
+    \hspace{1em}{\color{Gris}\tiny Electricidad con imanes: un generador de flujo axial}\hfill
     {\color{Gris}\tiny\insertframenumber/\inserttotalframenumber}\hspace{1em}}%
   \vspace{0.6em}}
 
 \newcommand{\dato}[2]{{\small\color{Gris}#1}\\[-1pt]{\Large\bfseries\color{Azul}#2}}
 
-\title{Generador de flujo axial con imanes NdFeB}
-\subtitle{Del electromagnetismo de Sadiku a una micro-red simulada en tiempo real}
+\title{Electricidad con imanes}
+\subtitle{Cómo un disco con imanes que gira puede cargar una batería y encender un bombillo}
 \date{}
 
 \begin{document}
@@ -55,9 +57,9 @@
   \begin{tikzpicture}[remember picture,overlay]
     \fill[Azul] (current page.north west) rectangle ([yshift=-4.4cm]current page.north east);
     \node[anchor=north west,text=white,font=\sffamily\bfseries\LARGE,text width=10cm,align=left]
-      at ([xshift=1cm,yshift=-1.2cm]current page.north west) {\inserttitle};
+      at ([xshift=1cm,yshift=-1.3cm]current page.north west) {\inserttitle};
     \node[anchor=north west,text=white!85!Azul,font=\sffamily\normalsize,text width=10cm,align=left]
-      at ([xshift=1cm,yshift=-2.9cm]current page.north west) {\insertsubtitle};
+      at ([xshift=1cm,yshift=-2.4cm]current page.north west) {\insertsubtitle};
     \begin{scope}[shift={([xshift=-2.6cm,yshift=-2.2cm]current page.north east)},scale=0.5]
       \foreach \i in {0,...,7} {
         \pgfmathsetmacro{\ang}{45*\i}
@@ -72,16 +74,15 @@
   \vspace{4.2cm}
   \begin{columns}[T]
     \column{0.5\textwidth}
-      \small Teoría Electromagnética\\[2pt]
-      \color{Gris}\footnotesize Basado en M.\,N.\,O. Sadiku, \emph{Elementos de Electromagnetismo}, cap.~7--9
+      \small Un generador de flujo axial, diseñado y simulado\\[2pt]
+      \color{Gris}\footnotesize Teoría Electromagnética
     \column{0.42\textwidth}
       \footnotesize\color{Gris}
-      Modelo en Python \(\cdot\) Visualizador 3D en Three.js\\
-      Piezas imprimibles en 3D \(\cdot\) 5 documentos técnicos
+      Incluye una demostración en vivo del simulador 3D
   \end{columns}
 \end{frame}
 
-% ================================================================ 2. Sistema  (0:45)
+% ================================================================ 2. Qué construimos  (0:45)
 \begin{frame}{¿Qué construimos?}
   \centering
   \begin{tikzpicture}[
@@ -89,237 +90,208 @@
                    text width=1.75cm,align=center,font=\scriptsize},
       flecha/.style={-{Stealth[length=2.2mm]},thick,Gris},
       node distance=0.42cm]
-    \node[caja,draw=Naranja,fill=Naranja!8] (mano) {Par motriz\\mano / motor};
-    \node[caja,right=of mano] (rotor) {Rotor\\\ValPolos{} imanes \ValGradoIman};
-    \node[caja,right=of rotor] (bob) {\ValBobinas{} bobinas\\sin núcleo};
-    \node[caja,right=of bob] (puente) {Puente\\rectificador};
-    \node[caja,right=of puente] (mppt) {Controlador\\MPPT};
-    \node[caja,right=of mppt,draw=Verde,fill=Verde!8] (bat) {Batería\\\SI{12}{V} / \SI{7}{Ah}};
-    \node[caja,below=0.9cm of bat] (inv) {Inversor\\\SI{110}{}/\SI{220}{V} \SI{60}{Hz}};
-    \node[caja,left=of inv,draw=Naranja,fill=Naranja!8] (foco) {Bombillo\\carga AC};
+    \node[caja,draw=Naranja,fill=Naranja!8] (mano) {Alguien gira\\el disco};
+    \node[caja,right=of mano] (rotor) {Disco con\\\ValPolos{} imanes};
+    \node[caja,right=of rotor] (bob) {\ValBobinas{} bobinas\\de cobre};
+    \node[caja,right=of bob] (puente) {Convertidor\\AC \(\to\) DC};
+    \node[caja,right=of puente] (mppt) {Cargador\\inteligente};
+    \node[caja,right=of mppt,draw=Verde,fill=Verde!8] (bat) {Batería\\de \SI{12}{V}};
+    \node[caja,below=0.9cm of bat] (inv) {Inversor\\\SI{110}{}/\SI{220}{V}};
+    \node[caja,left=of inv,draw=Naranja,fill=Naranja!8] (foco) {Bombillo};
     \draw[flecha] (mano) -- (rotor);
-    \draw[flecha] (rotor) -- node[above,font=\tiny]{\(\Phi(t)\)} (bob);
-    \draw[flecha] (bob) -- node[above,font=\tiny]{AC} (puente);
-    \draw[flecha] (puente) -- node[above,font=\tiny]{DC} (mppt);
+    \draw[flecha] (rotor) -- (bob);
+    \draw[flecha] (bob) -- (puente);
+    \draw[flecha] (puente) -- (mppt);
     \draw[flecha] (mppt) -- (bat);
     \draw[flecha] (bat) -- (inv);
     \draw[flecha] (inv) -- (foco);
-    \draw[flecha,Rojo,dashed] (bob.south) -- ++(0,-0.5) -- node[below,font=\tiny,text=Rojo]
-      {par de Lenz: frena el rotor} ([yshift=-0.5cm]rotor.south) -- (rotor.south);
   \end{tikzpicture}
 
   \vspace{0.5cm}
   \begin{columns}[T]
     \column{0.31\textwidth}
-      \begin{block}{Objetivo}\small
-        Convertir energía mecánica en eléctrica aplicando la ley de Faraday.
+      \begin{block}{La idea}\small
+        Convertir movimiento en electricidad, como la dínamo de una bicicleta.
       \end{block}
     \column{0.31\textwidth}
-      \begin{block}{Diseño}\small
-        Flujo axial, bobinas sin hierro y piezas impresas en PLA.
+      \begin{block}{El aparato}\small
+        Un disco de imanes que gira frente a bobinas de cobre, con piezas impresas en 3D.
       \end{block}
     \column{0.31\textwidth}
-      \begin{block}{Simulación}\small
-        Física completa del sistema, idéntica en Python y en el navegador.
+      \begin{block}{La simulación}\small
+        Un modelo por computador que reproduce el sistema completo en tiempo real.
       \end{block}
   \end{columns}
 \end{frame}
 
-% ================================================================ 3. Física  (0:50)
-\begin{frame}{La física: campo, flujo, Faraday y Lenz}
-  \begin{columns}[c]
-    \column{0.52\textwidth}
-      \small
-      \textbf{Campo en el eje de un imán cilíndrico}
-      \[
-        B_z(z)=\frac{B_r}{2}\left[\frac{z+L}{\sqrt{(z+L)^2+R^2}}-\frac{z}{\sqrt{z^2+R^2}}\right]
-      \]
-      \textbf{Ley de Faraday} (\(N_t=\ValEspirasTotales\) espiras en serie)
-      \[
-        \mathcal{E}(t)=-N_t\,\frac{\mathrm{d}\Phi}{\mathrm{d}t}
-        \qquad
-        f_e=\frac{p}{2}\,\frac{n}{60}
-      \]
-      \textbf{Ley de Lenz}: la corriente se opone al cambio de flujo
-      \[
-        \tau_{\text{Lenz}}=\frac{P_{\text{em}}}{\omega_m}
-      \]
-    \column{0.44\textwidth}
-      \includegraphics[width=\linewidth]{02_flujo_y_voltaje_inducido_faraday.png}
-      \vspace{2pt}
-      \begin{center}\footnotesize
-        \begin{tabular}{@{}ll@{}}
-          \(B\) en la cara del imán & \SI{\ValCampoCaraIman}{T}\\
-          \(B\) medio en la bobina & \SI{\ValCampoMedioBobina}{T}\\
-          Flujo máximo por espira & \SI{\ValFlujoMaximoMicro}{\micro Wb}
-        \end{tabular}
-      \end{center}
-  \end{columns}
-\end{frame}
+% ================================================================ 3. La idea física  (1:00)
+\begin{frame}{La idea: un imán en movimiento produce electricidad}
+  \centering
+  \begin{tikzpicture}[flecha/.style={-{Stealth[length=2.5mm]},very thick,Gris}]
+    % imán
+    \fill[Rojo!85] (0,0) rectangle (0.8,1.2);
+    \fill[Azul!60] (0.8,0) rectangle (1.6,1.2);
+    \node[white,font=\bfseries] at (0.4,0.6) {N};
+    \node[white,font=\bfseries] at (1.2,0.6) {S};
+    \draw[-{Stealth},thick,Naranja] (0,-0.35) -- node[below,font=\scriptsize,text=Naranja]{se mueve} (1.6,-0.35);
+    \node[font=\footnotesize,align=center] at (0.8,-1.25) {\textbf{1.} El imán\\pasa cerca};
+    \draw[flecha] (2.0,0.6) -- (3.0,0.6);
+    % bobina
+    \foreach \x in {3.5,3.75,...,4.75} \draw[Cobre,line width=1.6pt] (\x,0.6) ellipse (0.12 and 0.6);
+    \node[font=\footnotesize,align=center] at (4.1,-1.25) {\textbf{2.} El campo magnético\\cambia en la bobina};
+    \draw[flecha] (5.4,0.6) -- (6.6,0.6);
+    % bombillo
+    \fill[Naranja!25] (7.6,0.75) circle (0.75);
+    \fill[yellow!80!Naranja] (7.6,0.75) circle (0.45);
+    \fill[Gris] (7.4,-0.05) rectangle (7.8,0.2);
+    \node[font=\footnotesize,align=center] at (7.6,-1.25) {\textbf{3.} Aparece una\\corriente eléctrica};
+  \end{tikzpicture}
 
-% ================================================================ 4. Diseño  (0:40)
-\begin{frame}{El diseño del generador}
-  \begin{columns}[c]
-    \column{0.42\textwidth}
-      \footnotesize
-      \begin{tabular}{@{}lr@{}}
-        \toprule
-        Imanes & \ValPolos{} \(\times\) \SI{\ValDiametroIman}{}\(\times\)\SI{\ValEspesorIman}{mm}\\
-        Remanencia \(B_r\) & \SI{\ValBr}{T}\\
-        Bobinas & \ValBobinas{} \(\times\) \ValEspiras{} espiras\\
-        Alambre & AWG \ValCalibreAWG{}, \SI{\ValLongitudAlambreTotal}{m}\\
-        Entrehierro & \SI{\ValEntrehierro}{mm}\\
-        Resistencia interna & \SI{\ValResistenciaInterna}{\ohm}\\
-        Inductancia (Wheeler) & \SI{\ValInductanciaTotalMili}{mH}\\
-        Inercia del rotor & \SI{\ValInerciaRotor e-4}{kg.m^2}\\
-        \bottomrule
-      \end{tabular}
-
-      \vspace{8pt}
-      \begin{exampleblock}{A \ValRpmReferencia{} RPM}\footnotesize
-        \(f_e=\SI{\ValFrecuenciaRef}{Hz}\), \(V_{\text{pico}}=\SI{\ValTensionPicoRef}{V}\),
-        \(V_{\text{rms}}=\SI{\ValTensionRmsRef}{V}\)
-      \end{exampleblock}
-    \column{0.54\textwidth}
-      \includegraphics[width=\linewidth]{03_voltaje_rms_vs_rpm.png}
-      \\[-2pt]{\scriptsize\color{Gris} La tensión crece linealmente con la velocidad: \(\mathcal{E}\propto\omega\).}
-  \end{columns}
-\end{frame}
-
-% ================================================================ 5. Modelo realista  (0:50)
-\begin{frame}{Del modelo ideal al modelo realista}
-  \begin{columns}[c]
-    \column{0.5\textwidth}
-      \includegraphics[width=\linewidth]{09_onda_real_vs_senoidal.png}
+  \vspace{0.35cm}
+  \begin{columns}[T]
     \column{0.47\textwidth}
-      \small
+      \begin{block}{Ley de Faraday}\small
+        Cuanto más rápido cambia el campo, más voltaje se genera.
+        Por eso, si el disco gira al doble de velocidad, el voltaje se duplica.
+      \end{block}
+    \column{0.47\textwidth}
+      \begin{alertblock}{Ley de Lenz}\small
+        La corriente generada frena el imán. Cuanta más electricidad pedimos, más cuesta girar,
+        igual que pedalear con la dínamo encendida.
+      \end{alertblock}
+  \end{columns}
+\end{frame}
+
+% ================================================================ 4. El generador por dentro  (0:40)
+\begin{frame}{El generador por dentro}
+  \begin{columns}[c]
+    \column{0.56\textwidth}
+      \includegraphics[width=\linewidth,trim=500 255 525 340,clip]{simulador_despiece.png}
+    \column{0.41\textwidth}
       \begin{itemize}
-        \item \textbf{Onda real}: solape imán--espira; no es senoidal (factor de cresta \ValFactorCresta).
-        \item \textbf{Rotor}: \(J\,\dot\omega=\tau_m-\tau_{\text{Lenz}}-\tau_{\text{fricción}}\).
-        \item \textbf{Electrónica}: MPPT desde \SI{\ValControladorArranque}{V}, absorción \SI{\ValControladorAbsorcion}{V},
-              flotación \SI{\ValControladorFlotacion}{V}, máx.\ \SI{\ValControladorCorrienteMax}{A}.
-        \item \textbf{Batería plomo-ácido}: Thevenin, Peukert y gasificación.
-        \item \textbf{Inversor}: \SI{\ValInversorVacio}{W} en vacío; corte a \SI{\ValInversorCorte}{V}, reconexión a \SI{\ValInversorReconexion}{V}.
-        \item \textbf{Térmico}: \(R_{\text{Cu}}\) sube y \(B_r\) baja con la temperatura.
+        \setlength{\itemsep}{6pt}
+        \item \textbf{\ValPolos{} imanes de neodimio}, del tamaño de una moneda (\SI{\ValDiametroIman}{mm}), alternando norte y sur.
+        \item \textbf{\ValBobinas{} bobinas} con unos \SI{90}{m} de alambre de cobre en total.
+        \item Imanes y bobinas separados solo \SI{\ValEntrehierro}{mm}: el campo se debilita rápido con la distancia.
+        \item A \ValRpmReferencia{} vueltas por minuto (5 por segundo) genera unos \SI{\ValTensionRmsRef}{V}.
       \end{itemize}
   \end{columns}
 \end{frame}
 
-% ================================================================ 6. Micro-red  (0:40)
-\begin{frame}{Dinámica y carga de la batería}
-  \begin{columns}[T]
-    \column{0.49\textwidth}
+% ================================================================ 5. Qué tiene en cuenta la simulación  (0:50)
+\begin{frame}{Una simulación lo más cercana posible a la realidad}
+  \begin{columns}[c]
+    \column{0.5\textwidth}
+      \small
+      \begin{itemize}
+        \setlength{\itemsep}{4pt}
+        \item \textbf{El disco pesa}: tarda en acelerar y en detenerse.
+        \item \textbf{Hay rozamiento}: si se deja de girar, se para solo.
+        \item \textbf{El cargador} solo funciona por encima de cierta velocidad.
+        \item \textbf{La batería} no es un tanque perfecto: se calienta, pierde carga y se llena más despacio al final.
+        \item \textbf{El inversor} consume energía aunque no haya nada conectado.
+        \item \textbf{El calor} aumenta la resistencia del cobre y debilita los imanes.
+      \end{itemize}
+    \column{0.47\textwidth}
       \includegraphics[width=\linewidth]{10_arranque_impulso_y_frenado.png}
-      \\{\scriptsize\color{Gris}Impulso de \SI{\ValParImpulso}{N.m}: pico de \ValRpmPicoImpulso{} RPM y parada en \SI{\ValTiempoParadaImpulso}{s}.}
-    \column{0.49\textwidth}
-      \includegraphics[width=\linewidth]{12_ciclo_de_carga_bateria.png}
-      \\{\scriptsize\color{Gris}MPPT \(\to\) absorción en \SI{\ValHorasHastaAbsorcion}{h} \(\to\) flotación en \SI{\ValHorasHastaFlotacion}{h}.}
+      \\{\scriptsize\color{Gris}Un empujón con la mano lleva el disco a unas \ValRpmPicoImpulso{} vueltas por minuto, y se detiene en unos \SI{\ValTiempoParadaImpulso}{s}.}
   \end{columns}
 \end{frame}
 
-% ================================================================ 7. Software  (0:30)
-\begin{frame}{Arquitectura del software}
-  \centering
-  \begin{tikzpicture}[
-      capa/.style={draw=Azul,fill=Azul!6,rounded corners=3pt,minimum height=0.8cm,
-                   minimum width=2.4cm,align=center,font=\scriptsize},
-      flecha/.style={-{Stealth[length=2mm]},thick,Gris},
-      node distance=0.35cm]
-    \node[capa] (pres) {presentación\\CLI};
-    \node[capa,right=of pres] (infra) {infraestructura\\CAD, gráficas, LaTeX};
-    \node[capa,right=of infra] (app) {aplicación\\simuladores};
-    \node[capa,right=of app,draw=Verde,fill=Verde!8] (dom) {dominio\\física pura};
-    \draw[flecha] (pres) -- (infra);
-    \draw[flecha] (infra) -- (app);
-    \draw[flecha] (app) -- (dom);
-    \node[capa,draw=Naranja,fill=Naranja!8,minimum width=6.2cm,anchor=north]
-      (js) at ([yshift=-1.0cm]$(app.south)!0.5!(dom.south)$)
-      {Visualizador Three.js: \texttt{dinamica.js}, espejo exacto del modelo};
-    \draw[flecha,<->,Naranja] (dom.south) -- node[right,font=\tiny,text=Naranja]
-      {paridad \(10^{-9}\)} (dom.south |- js.north);
-  \end{tikzpicture}
-
-  \vspace{0.45cm}
+% ================================================================ 6. Confiabilidad  (0:30)
+\begin{frame}{¿Por qué confiar en la simulación?}
   \begin{columns}[T]
-    \column{0.23\textwidth}\centering\dato{Pruebas unitarias}{109}
-    \column{0.23\textwidth}\centering\dato{Pruebas E2E}{29}
-    \column{0.23\textwidth}\centering\dato{Gráficas generadas}{12}
-    \column{0.23\textwidth}\centering\dato{Piezas STL}{4}
+    \column{0.31\textwidth}
+      \begin{block}{Basada en la física}\small
+        Usa las mismas ecuaciones del curso de electromagnetismo (Sadiku).
+      \end{block}
+    \column{0.31\textwidth}
+      \begin{block}{Dos versiones idénticas}\small
+        El cálculo en Python y la simulación del navegador coinciden hasta la novena cifra decimal.
+      \end{block}
+    \column{0.31\textwidth}
+      \begin{block}{Probada a fondo}\small
+        Cada cambio se verifica con pruebas que revisan física, resultados e interfaz.
+      \end{block}
   \end{columns}
-  \vspace{4pt}
-  \begin{center}\scriptsize\color{Gris}
-    Una única fuente de verdad (\texttt{configuracion.py}) alimenta el modelo, las piezas 3D, las gráficas y estos documentos.
-  \end{center}
+
+  \vspace{0.7cm}
+  \begin{columns}[T]
+    \column{0.3\textwidth}\centering\dato{Pruebas automáticas}{138}
+    \column{0.3\textwidth}\centering\dato{Gráficas generadas}{12}
+    \column{0.3\textwidth}\centering\dato{Documentos técnicos}{5}
+  \end{columns}
 \end{frame}
 
-% ================================================================ 8. Demo  (3:30)
+% ================================================================ 7. Demo  (3:30)
 \begin{frame}{Demostración en vivo}
   \begin{columns}[c]
     \column{0.56\textwidth}
       \includegraphics[width=\linewidth]{simulador_general.png}
-      \\{\tiny\color{Gris}\texttt{uv run python visualizador\_3d/server.py}}
     \column{0.41\textwidth}
-      \scriptsize
+      \small
       \begin{enumerate}
-        \setlength{\itemsep}{1pt}
-        \item \textbf{Faraday}: par \SI{0.05}{N.m}, onda real en el osciloscopio.
-        \item \textbf{Lenz}: par a 0 e \emph{Impulso}; el rotor frena solo.
-        \item \textbf{Régimen}: par \SI{\ValParReferencia}{N.m} \(\to\) \(\approx\)\ValRpmRegimenRef{} RPM.
-        \item \textbf{Micro-red}: carga \SI{15}{W}; la batería se descarga.
-        \item \textbf{Carga}: inversor apagado, par \SI{\ValParMaximoMotriz}{N.m} y tiempo \(500\times\); el SoC sube.
-        \item \textbf{Diseño}: entrehierro y condensador en \emph{Ajustes}.
-        \item \textbf{Despiece} y cámaras.
+        \setlength{\itemsep}{2pt}
+        \item Girar el disco y ver la electricidad generada.
+        \item Darle un empujón y verlo frenar solo.
+        \item Encontrar un giro constante.
+        \item Encender el bombillo con la batería.
+        \item Cargar la batería acelerando el tiempo.
+        \item Separar imanes y bobinas.
+        \item Ver el generador por dentro.
       \end{enumerate}
   \end{columns}
 \end{frame}
 
-% ================================================================ 9. Resultados  (0:40)
-\begin{frame}{Resultados del modelo realista}
-  \begin{columns}[c]
-    \column{0.5\textwidth}
-      \includegraphics[width=\linewidth]{11_regimen_vs_par_motriz.png}
-    \column{0.46\textwidth}
-      \footnotesize
-      \begin{tabular}{@{}lr@{}}
-        \toprule
-        \multicolumn{2}{@{}l}{\textbf{Par motriz de \SI{\ValParReferencia}{N.m}}}\\
-        \midrule
-        Velocidad de régimen & \ValRpmRegimenRef{} RPM\\
-        Potencia en el eje & \SI{\ValPotenciaEjeRef}{W}\\
-        Potencia a la batería & \SI{\ValPotenciaBateriaRef}{W}\\
-        Eficiencia global & \SI{\ValEficienciaRef}{\percent}\\
-        Temperatura de bobinas & \SI{\ValTemperaturaRegimenRef}{\celsius}\\
-        \midrule
-        \multicolumn{2}{@{}l}{\textbf{Par máximo de \SI{\ValParMaximoMotriz}{N.m}}}\\
-        \midrule
-        Velocidad & \ValRpmParMaximo{} RPM\\
-        Potencia a la batería & \SI{\ValPotenciaBateriaParMaximo}{W}\\
-        \bottomrule
-      \end{tabular}
+% ================================================================ 8. Resultados  (0:50)
+\begin{frame}{¿Cuánta energía produce?}
+  \begin{columns}[T]
+    \column{0.31\textwidth}\centering
+      \dato{Girando suave}{\ValRpmRegimenRef{} RPM}\\[6pt]
+      {\small unas 8 vueltas por segundo}
+    \column{0.31\textwidth}\centering
+      \dato{Llega a la batería}{\ValPotenciaBateriaRef{} W}\\[6pt]
+      {\small suficiente para un LED}
+    \column{0.31\textwidth}\centering
+      \dato{Aprovechamiento}{\ValEficienciaRef{}\,\%}\\[6pt]
+      {\small de cada 10 partes de esfuerzo, 4 llegan a la batería}
+  \end{columns}
+
+  \vspace{0.8cm}
+  \begin{columns}[T]
+    \column{0.47\textwidth}
+      \begin{exampleblock}{Girando con toda la fuerza}\small
+        Unas \ValRpmParMaximo{} vueltas por minuto y \SI{\ValPotenciaBateriaParMaximo}{W} hacia la batería.
+      \end{exampleblock}
+    \column{0.47\textwidth}
+      \begin{alertblock}{La comparación}\small
+        Un bombillo de \SI{15}{W} consume más de lo que el generador produce:
+        la batería guarda la energía para usarla después.
+      \end{alertblock}
   \end{columns}
 \end{frame}
 
-% ================================================================ 10. Conclusiones  (0:20)
+% ================================================================ 9. Conclusiones  (0:30)
 \begin{frame}{Conclusiones}
-  \begin{columns}[T]
-    \column{0.6\textwidth}
-      \begin{itemize}
-        \item La ley de Faraday explica la tensión generada; la ley de Lenz explica por qué cuesta girar el rotor.
-        \item Sin núcleo de hierro, el generador entrega pocos vatios: sirve para cargar la batería
-              despacio, no para alimentar la carga AC de forma continua.
-        \item El modelo realista cambia los números: onda no senoidal, umbral del MPPT y pérdidas térmicas.
-        \item El simulador reproduce el mismo modelo verificado en Python, por lo que la demo muestra resultados calculados.
-      \end{itemize}
-    \column{0.36\textwidth}
-      \begin{alertblock}{Mejoras posibles}\small
-        Más espiras o un estator doble, imanes N52 y un entrehierro menor.
-      \end{alertblock}
-      \vspace{0.4cm}
-      \begin{center}
-        {\Large\bfseries\color{Azul}¿Preguntas?}\\[4pt]
-        {\tiny\color{Gris}github.com/EmanuelOrozco/axial-flux-generator}
-      \end{center}
-  \end{columns}
+  \begin{itemize}
+    \setlength{\itemsep}{4pt}
+    \item Un imán que se mueve cerca de una bobina genera electricidad: es el mismo principio de las centrales eléctricas.
+    \item Generar electricidad siempre cuesta esfuerzo: la corriente frena el disco.
+    \item Un generador pequeño produce poca energía, pero con una batería puede acumularla y encender un bombillo.
+    \item La simulación permite probar el diseño antes de construirlo.
+  \end{itemize}
+
+  \vspace{0.4cm}
+  \begin{tcolorbox}[colback=Azul!6,colframe=Azul,boxrule=0.8pt,arc=3pt,halign=center]
+    \large\bfseries\color{Azul}
+    Con imanes, cobre y movimiento se fabrica electricidad;\\
+    la física explica cómo y la simulación muestra cuánto.
+  \end{tcolorbox}
+
+  \vspace{0.2cm}
+  \begin{center}
+    {\Large\bfseries\color{Azul}¿Preguntas?}
+  \end{center}
 \end{frame}
 
 \end{document}

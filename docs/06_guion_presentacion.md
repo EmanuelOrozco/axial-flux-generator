@@ -1,7 +1,8 @@
 # Guion de la presentación (10 minutos con demo en vivo)
 
-Diapositivas: `docs/06_presentacion.pdf` (10 diapositivas, 16:9).
-Tiempo planificado: **9:00**, con **1:00 de margen** para transiciones o una pregunta rápida.
+Diapositivas: `docs/06_presentacion.pdf` (9 diapositivas, 16:9).
+Público: **general, no técnico**. Se evitan las fórmulas y se explican las ideas con comparaciones cotidianas.
+Tiempo planificado: **8:50**, con **1:10 de margen** para transiciones o una pregunta rápida.
 
 ## Antes de empezar
 
@@ -9,9 +10,15 @@ Tiempo planificado: **9:00**, con **1:00 de margen** para transiciones o una pre
    ```bash
    uv run python visualizador_3d/server.py
    ```
-2. Recargar la página justo antes de presentar para partir del estado inicial (batería al 50 %, carga AC 15 W, inversor encendido, tiempo 50×).
+2. Recargar la página justo antes de presentar para partir del estado inicial (batería al 50 %, carga de 15 W, inversor encendido, tiempo 50×).
 3. Tener el PDF en pantalla completa y el simulador a un `Alt+Tab` de distancia.
-4. Si la demo falla, usar la captura de la diapositiva 8 y las gráficas de las diapositivas 6 y 9: contienen los mismos resultados.
+4. Si la demo falla, usar la captura de la diapositiva 7 y las cifras de la diapositiva 8.
+
+## Recomendaciones para un público general
+
+- Decir “vueltas por minuto” en lugar de RPM, y “voltaje” o “electricidad” en lugar de fem o flujo.
+- Usar siempre la misma comparación: **la dínamo de bicicleta** (genera electricidad y cuesta más pedalear con la luz encendida).
+- No leer las diapositivas: tienen pocas palabras para que el público mire la demo.
 
 ## Cronograma
 
@@ -19,47 +26,44 @@ Tiempo planificado: **9:00**, con **1:00 de margen** para transiciones o una pre
 |---|-------------|----------|-----------|
 | 1 | Portada | 0:15 | 0:15 |
 | 2 | ¿Qué construimos? | 0:45 | 1:00 |
-| 3 | La física | 0:50 | 1:50 |
-| 4 | El diseño | 0:40 | 2:30 |
-| 5 | Modelo realista | 0:50 | 3:20 |
-| 6 | Dinámica y carga | 0:40 | 4:00 |
-| 7 | Arquitectura del software | 0:30 | 4:30 |
-| 8 | **Demo en vivo** | 3:30 | 8:00 |
-| 9 | Resultados | 0:40 | 8:40 |
-| 10 | Conclusiones | 0:20 | 9:00 |
+| 3 | La idea: un imán en movimiento produce electricidad | 1:00 | 2:00 |
+| 4 | El generador por dentro | 0:40 | 2:40 |
+| 5 | Una simulación cercana a la realidad | 0:50 | 3:30 |
+| 6 | ¿Por qué confiar en la simulación? | 0:30 | 4:00 |
+| 7 | **Demo en vivo** | 3:30 | 7:30 |
+| 8 | ¿Cuánta energía produce? | 0:50 | 8:20 |
+| 9 | Conclusiones y mensaje final | 0:30 | 8:50 |
 
 ## Qué decir en cada diapositiva
 
-**1. Portada (0:15).** Presentar el proyecto: un generador de flujo axial con imanes de neodimio, diseñado a partir de la teoría de Sadiku y simulado de extremo a extremo.
+**1. Portada (0:15).** “Les voy a mostrar cómo un disco con imanes que gira puede cargar una batería y encender un bombillo.”
 
-**2. ¿Qué construimos? (0:45).** Recorrer el diagrama de izquierda a derecha: el par mueve el rotor, el flujo variable induce tensión en las bobinas, el puente la rectifica, el MPPT carga la batería y el inversor alimenta un bombillo a 110/220 V. Señalar la flecha roja: la corriente produce un par de Lenz que frena el rotor.
+**2. ¿Qué construimos? (0:45).** Recorrer el diagrama: alguien gira el disco, los imanes pasan frente a las bobinas y producen electricidad, un convertidor la prepara, el cargador llena la batería y el inversor la convierte en la electricidad de un enchufe de casa para el bombillo.
 
-**3. La física (0:50).** Tres ideas: el campo del imán decae con la distancia (por eso importa el entrehierro), Faraday da la tensión a partir de la variación del flujo y Lenz explica por qué el generador “cuesta” más de girar cuando entrega corriente. Mencionar el campo medio en la bobina (0.15 T) y el flujo máximo (41 µWb).
+**3. La idea (1:00).** Es la diapositiva más importante. Contar los tres pasos del dibujo. Luego, Faraday: “cuanto más rápido gira, más voltaje”. Luego, Lenz, con la dínamo: “cuanta más electricidad pedimos, más cuesta girar”. Esa es la razón por la que la energía nunca sale gratis.
 
-**4. El diseño (0:40).** Leer solo tres datos: 8 imanes, 1440 espiras en total y 2.5 mm de entrehierro. La gráfica muestra que la tensión crece linealmente con las RPM; a 300 RPM se obtienen unos 5.3 V rms.
+**4. El generador por dentro (0:40).** Señalar en la imagen los imanes de colores (norte y sur alternados) y las bobinas de cobre. Mencionar que están separados solo 2.5 mm, porque el imán pierde fuerza muy rápido con la distancia.
 
-**5. Modelo realista (0:50).** El modelo ideal supone una onda senoidal; el real no lo es porque el imán y la bobina se solapan como dos círculos. Enumerar rápido lo que añade el modelo: inercia del rotor, límites del MPPT, batería de plomo-ácido, inversor con consumo en vacío y temperatura.
+**5. Simulación realista (0:50).** “Un modelo simple diría que todo funciona perfecto. El nuestro tiene en cuenta que el disco pesa, que hay rozamiento, que la batería no es perfecta y que el calor afecta.” Señalar la gráfica: tras un empujón, el disco se frena solo en menos de 3 segundos.
 
-**6. Dinámica y carga (0:40).** Izquierda: un impulso con la mano lleva el rotor a ~505 RPM y se detiene en 2.7 s por fricción y Lenz. Derecha: un ciclo de carga completo pasa por MPPT, absorción y flotación.
+**6. ¿Por qué confiar? (0:30).** Usa la física del curso, el cálculo y la simulación coinciden en sus resultados, y 138 pruebas automáticas lo revisan. “Lo que van a ver no es una animación: son cálculos.”
 
-**7. Arquitectura (0:30).** El código está en capas; el mismo modelo dinámico existe en Python y en JavaScript, y las pruebas exigen que coincidan con un error relativo de 10⁻⁹. Lo que se verá en la demo es el modelo verificado, no una animación.
+**7. Demo en vivo (3:30).** Cambiar al simulador y seguir los pasos de la siguiente sección.
 
-**8. Demo en vivo (3:30).** Cambiar al simulador y seguir los pasos de la siguiente sección.
+**8. ¿Cuánta energía produce? (0:50).** Girando suave (unas 8 vueltas por segundo) llega casi 1 W a la batería, lo que alcanza para un LED. De cada 10 partes de esfuerzo, 4 se convierten en energía guardada. Un bombillo de 15 W gasta más de lo que el generador produce: por eso la batería es clave, porque guarda la energía para usarla después.
 
-**9. Resultados (0:40).** Con 0.07 N·m el rotor se estabiliza en ~483 RPM y entrega 0.96 W a la batería, con un 40 % de eficiencia global. Al par máximo (0.30 N·m) llega a ~1000 RPM y 4.35 W.
-
-**10. Conclusiones (0:20).** Faraday y Lenz explican todo el comportamiento; sin hierro el generador da pocos vatios, suficientes para cargar despacio una batería pero no para sostener una carga AC. Abrir a preguntas.
+**9. Conclusiones (0:30).** Repasar los cuatro puntos y leer en voz alta el mensaje final del recuadro. Abrir a preguntas.
 
 ## Guion de la demo (3:30)
 
-| Tiempo | Acción en el simulador | Qué señalar |
-|--------|------------------------|-------------|
-| 0:00–0:30 | Reanudar con el par en 0.050 N·m. Mostrar el osciloscopio en **CH1**. | El rotor acelera; la onda del generador no es senoidal (forma trapezoidal). |
-| 0:30–1:00 | Poner el par en **0** y pulsar **Impulso**. | Sube a unos 500 RPM y frena solo en ~3 s: eso es Lenz más fricción. |
-| 1:00–1:30 | Par en **0.070 N·m**. Osciloscopio en **Dual**. | ~483 RPM, ~32 Hz, 2.40 W en el eje. Se encienden el LED de DC y el LED del cargador. |
-| 1:30–2:00 | Mostrar el panel de batería con carga AC **15 W** e inversor encendido. Cambiar **110 V → 220 V**. | Corriente neta ≈ −1.47 A: el generador no alcanza para la carga y la batería se descarga. CH2 muestra la salida del inversor. |
-| 2:00–2:40 | **Ajustes** → apagar el inversor. Par en **0.30 N·m** y tiempo **500×**. | La corriente neta se vuelve positiva y el SoC sube visiblemente; la temperatura de las bobinas aumenta. |
-| 2:40–3:10 | **Ajustes** → entrehierro de 2.5 a **6 mm**; condensador de 220 a **4700 µF**. | Menor tensión con más entrehierro (el campo decae); el rizado baja con un condensador mayor. |
-| 3:10–3:30 | Cerrar ajustes, pulsar **Despiece** y cambiar de cámara (**Entrehierro**). | Los imanes N/S alternados frente a las bobinas: la geometría que produce la onda vista. |
+| Tiempo | Acción en el simulador | Qué decir |
+|--------|------------------------|-----------|
+| 0:00–0:30 | Reanudar con el par en 0.050 N·m. Mostrar el osciloscopio. | “El disco empieza a girar y aquí vemos la electricidad que genera: sube y baja cada vez que pasa un imán.” |
+| 0:30–1:00 | Poner el par en **0** y pulsar **Impulso**. | “Esto es un empujón con la mano. Miren cómo se frena solo: el rozamiento y la propia electricidad lo detienen.” |
+| 1:00–1:30 | Par en **0.070 N·m**. | “Con un giro suave y constante se estabiliza en unas 480 vueltas por minuto.” Señalar los LED encendidos. |
+| 1:30–2:00 | Mostrar el panel de batería con la carga de **15 W** encendida. Cambiar **110 V → 220 V**. | “El bombillo gasta más de lo que producimos, así que la batería se va vaciando. El inversor puede dar 110 o 220 voltios, como un enchufe.” |
+| 2:00–2:40 | **Ajustes** → apagar el inversor. Par en **0.30 N·m** y tiempo **500×**. | “Ahora apagamos el bombillo, giramos con fuerza y aceleramos el tiempo: la batería se va llenando y las bobinas se calientan un poco.” |
+| 2:40–3:10 | **Ajustes** → entrehierro de 2.5 a **6 mm**. | “Si separamos un poco los imanes de las bobinas, el voltaje cae: por eso deben estar tan cerca.” |
+| 3:10–3:30 | Cerrar ajustes, pulsar **Despiece** y la cámara **Entrehierro**. | “Así se ve por dentro: imanes norte y sur alternados frente a las bobinas.” |
 
-Volver al PDF en la diapositiva 9.
+Volver al PDF en la diapositiva 8.
