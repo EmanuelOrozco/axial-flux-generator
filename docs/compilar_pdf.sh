@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# Regenera gráficas, piezas y valores del modelo, y compila los documentos PDF en docs/.
+#
+# Uso:  ./docs/compilar_pdf.sh            (todos los documentos)
+#       ./docs/compilar_pdf.sh 01_marco_teorico
+set -euo pipefail
+
+DOCS="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+RAIZ="$(dirname "$DOCS")"
+FUENTES="$DOCS/latex"
+COMPILACION="$FUENTES/build"
+
+cd "$RAIZ"
+uv run generador-axial todo > /dev/null
+
+documentos=("$@")
+if [ ${#documentos[@]} -eq 0 ]; then
+  documentos=(01_marco_teorico 02_memoria_de_calculo 03_guia_fabricacion 04_arquitectura_software 05_modelo_realista)
+fi
+
+mkdir -p "$COMPILACION"
+cd "$FUENTES"
+for documento in "${documentos[@]}"; do
+  echo "Compilando $documento.pdf ..."
+  for _ in 1 2; do
+    pdflatex -interaction=nonstopmode -halt-on-error -output-directory="$COMPILACION" "$documento.tex" > "$COMPILACION/$documento.salida" \
+      || { tail -40 "$COMPILACION/$documento.log"; exit 1; }
+  done
+  cp "$COMPILACION/$documento.pdf" "$DOCS/$documento.pdf"
+done
+echo "PDF disponibles en $DOCS"

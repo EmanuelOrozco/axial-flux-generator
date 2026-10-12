@@ -1,0 +1,503 @@
+\documentclass[11pt]{article}
+\newcommand{\nombredocumento}{01 · Marco teórico}
+\input{comun/preambulo.tex}
+
+\begin{document}
+
+\portada{Marco teórico del generador de flujo axial}
+        {Deducción paso a paso de las leyes electromagnéticas que gobiernan el prototipo}
+        {Documento 1 de 5 · Fundamentos (Sadiku, Cap.~7, 8 y 9)}
+
+\tableofcontents
+\newpage
+
+%=====================================================================
+\section{Objetivo y alcance}
+%=====================================================================
+
+Este documento explica \emph{por qué} funciona el generador y \emph{de dónde salen} cada una de las
+ecuaciones que usan el modelo de simulación (\archivo{src/generador_axial}), el visualizador 3D y la
+guía de fabricación. Ninguna fórmula se presenta sin su deducción: se parte de la ley de Biot--Savart y de
+la ley de Faraday y se llega, paso a paso, a la tensión que se medirá en los bornes del prototipo.
+
+El generador estudiado tiene la siguiente topología:
+\begin{itemize}
+  \item \textbf{Rotor}: un disco con $P=\ValPolos$ imanes cilíndricos de NdFeB
+        ($\varnothing\,\ValDiametroIman\times\ValEspesorIman$\,mm) montados a un radio de \ValRadioMontaje\,mm,
+        con polaridad alternada N--S--N--S.
+  \item \textbf{Estator}: un disco fijo con $N_b=\ValBobinas$ bobinas de núcleo de aire de $N=\ValEspiras$ espiras.
+  \item \textbf{Entrehierro}: $g=\ValEntrehierro$\,mm entre la cara de los imanes y la cara de las bobinas.
+\end{itemize}
+
+\begin{nota}[Sobre la numeración de Sadiku]
+Las secciones citadas corresponden a la 3.ª edición en español de \emph{Elementos de Electromagnetismo}:
+Cap.~7 (Campos magnetostáticos: Biot--Savart, Ampère, Sec.~7.5 densidad de flujo),
+Cap.~8 (Fuerzas, materiales y dispositivos magnéticos: Sec.~8.2 fuerzas, Sec.~8.5 imanación,
+Sec.~8.6 clasificación de materiales) y Cap.~9 (Campos variables: Sec.~9.2 ley de Faraday,
+Sec.~9.3 fem de transformador y de movimiento). En otras ediciones la numeración puede variar ligeramente.
+\end{nota}
+
+%=====================================================================
+\section{Magnetostática: de Biot--Savart a la ley de Gauss magnética}
+%=====================================================================
+
+\subsection{Ley de Biot--Savart (Cap.~7)}
+Un elemento de corriente $I\,\dif\vect{l}$ produce en un punto situado a un vector $\vect{R}$ de él la densidad
+de flujo
+\begin{equation}
+  \dif\vect{B} = \frac{\mu_0}{4\pi}\,\frac{I\,\dif\vect{l}\times\unitario{R}}{R^2},
+  \qquad \mu_0 = 4\pi\times10^{-7}\ \si{\henry\per\meter}.
+  \label{eq:biot}
+\end{equation}
+Para una distribución superficial de corriente $\vect{K}$ (en \si{\ampere\per\meter}) basta sustituir
+$I\,\dif\vect{l}\to\vect{K}\,\dif S$.
+
+\subsection{Ley de Gauss para el campo magnético (Sec.~7.5)}
+\begin{equation}
+  \oint_S \vect{B}\cdot\dif\vect{S} = 0 \quad\Longleftrightarrow\quad \nabla\cdot\vect{B}=0 .
+\end{equation}
+\textbf{Paso a paso:} la forma diferencial se obtiene aplicando el teorema de la divergencia,
+$\oint_S\vect{B}\cdot\dif\vect{S}=\int_V\nabla\cdot\vect{B}\,\dif v=0$, que debe cumplirse para \emph{cualquier}
+volumen $V$; por tanto el integrando es nulo en todo punto.
+
+\textbf{Consecuencia para el generador:} las líneas de $\vect{B}$ son cerradas. Todo el flujo que sale de la
+cara Norte de un imán debe regresar a su cara Sur. En el rotor con polos alternados ese retorno se hace, en
+buena parte, a través del imán vecino (de polaridad opuesta), lo que concentra el flujo en las bobinas que
+están enfrente.
+
+%=====================================================================
+\section{Materiales magnéticos e imanes de neodimio}
+%=====================================================================
+
+\subsection{Imanación y corrientes ligadas (Sec.~8.5)}
+En un material, los momentos magnéticos atómicos se describen con el vector imanación $\vect{M}$ (momento
+dipolar por unidad de volumen, \si{\ampere\per\meter}). Se cumple
+\begin{equation}
+  \vect{B} = \mu_0\left(\vect{H}+\vect{M}\right).
+\end{equation}
+Sadiku demuestra que el efecto de $\vect{M}$ es idéntico al de dos distribuciones de corriente
+\emph{ligada}:
+\begin{equation}
+  \vect{J}_b = \nabla\times\vect{M} \quad\text{(volumétrica)}, \qquad
+  \vect{K}_b = \vect{M}\times\unitario{n} \quad\text{(superficial)}.
+  \label{eq:ligadas}
+\end{equation}
+
+\subsection{Ferromagnéticos duros (Sec.~8.6)}
+El NdFeB ($\mathrm{Nd_2Fe_{14}B}$) es un ferromagnético \emph{duro}: su ciclo de histéresis es muy ancho.
+Las dos cifras que lo caracterizan son:
+\begin{itemize}
+  \item \textbf{Remanencia} $B_r$: densidad de flujo que conserva sin campo externo.
+  \item \textbf{Coercitividad} $H_c$: campo inverso necesario para anular $B$ ($>\SI{850}{\kilo\ampere\per\meter}$).
+        Es tan grande que las corrientes inducidas en las bobinas no pueden desmagnetizar el imán.
+\end{itemize}
+
+\begin{table}[H]
+\centering
+\caption{Grados comerciales típicos de NdFeB.}
+\begin{tabular}{lccccc}
+\toprule
+Grado & N35 & N38 & N42 & N48 & N52\\
+\midrule
+$B_r$ típica [T] & 1.19 & 1.24 & 1.30 & 1.40 & 1.45\\
+\bottomrule
+\end{tabular}
+\end{table}
+El prototipo usa $B_r=\ValBr$\,T (grado \ValGradoIman).
+
+%=====================================================================
+\section{Campo axial de un imán cilíndrico: deducción completa}
+%=====================================================================
+
+\subsection{Paso 1: el imán es un solenoide equivalente}
+Un imán cilíndrico de radio $R$ y espesor $L$ con imanación uniforme $\vect{M}=M\,\unitario{z}$ cumple:
+\begin{enumerate}
+  \item En el interior $\vect{M}$ es constante, así que $\vect{J}_b=\nabla\times\vect{M}=\vect{0}$.
+  \item En las caras planas $\unitario{n}=\pm\unitario{z}$, de modo que $\vect{K}_b=M\unitario{z}\times(\pm\unitario{z})=\vect{0}$.
+  \item En la cara lateral $\unitario{n}=\unitario{\rho}$, de modo que
+        $\vect{K}_b=M\unitario{z}\times\unitario{\rho}=M\,\unitario{\phi}$.
+\end{enumerate}
+Es decir, \textbf{el imán equivale a una lámina cilíndrica de corriente azimutal $K=M$}: exactamente un
+solenoide de longitud $L$ con $nI=M$ amperios-vuelta por metro.
+
+\subsection{Paso 2: campo de una espira circular en su eje}
+Tomemos una espira de radio $R$ en el plano $z'=0$ con corriente $I$, y un punto del eje a una altura $z$.
+\begin{enumerate}
+  \item La distancia de cualquier punto de la espira al punto de observación es $\sqrt{R^2+z^2}$, constante.
+  \item Por simetría, las componentes radiales de $\dif\vect{B}$ se cancelan dos a dos; sólo sobrevive la axial.
+  \item El ángulo entre $\dif\vect{l}$ y $\vect{R}$ es \ang{90}, y la proyección axial de $\dif\vect{B}$ introduce
+        el factor $R/\sqrt{R^2+z^2}$:
+        \[
+          \dif B_z = \frac{\mu_0 I\,\dif l}{4\pi(R^2+z^2)}\cdot\frac{R}{\sqrt{R^2+z^2}} .
+        \]
+  \item Integrando $\dif l$ sobre la circunferencia ($\oint\dif l=2\pi R$):
+        \begin{equation}
+          B_z^{\text{espira}}(z) = \frac{\mu_0 I R^2}{2\left(R^2+z^2\right)^{3/2}} .
+          \label{eq:espira}
+        \end{equation}
+\end{enumerate}
+
+\subsection{Paso 3: superposición de espiras (solenoide finito)}
+Situamos el imán entre $z'=-L$ y $z'=0$, de forma que su cara Norte está en $z=0$ y el espacio de trabajo es
+$z>0$. Una rebanada de espesor $\dif z'$ transporta la corriente $K\,\dif z'$ y, por \eqref{eq:espira},
+\[
+  \dif B_z = \frac{\mu_0 K R^2\,\dif z'}{2\left(R^2+(z-z')^2\right)^{3/2}} .
+\]
+\begin{enumerate}
+  \item Cambio de variable $u=z-z'$, $\dif u=-\dif z'$. Los límites cambian: $z'=-L\Rightarrow u=z+L$;
+        $z'=0\Rightarrow u=z$.
+  \item La integral queda
+        $\displaystyle B_z=\frac{\mu_0 K R^2}{2}\int_{z}^{z+L}\frac{\dif u}{(R^2+u^2)^{3/2}}$.
+  \item Primitiva conocida: $\displaystyle\int\frac{\dif u}{(R^2+u^2)^{3/2}}=\frac{u}{R^2\sqrt{R^2+u^2}}$
+        (se comprueba derivando).
+  \item Evaluando y simplificando $R^2$:
+        \[
+          B_z(z)=\frac{\mu_0 K}{2}\left[\frac{z+L}{\sqrt{(z+L)^2+R^2}}-\frac{z}{\sqrt{z^2+R^2}}\right].
+        \]
+  \item Para un imán permanente con permeabilidad de retroceso $\mu_r\approx1$ (NdFeB: 1.05), $\mu_0 M = B_r$.
+        Con $K=M$:
+\end{enumerate}
+\begin{resultado}[Campo axial del imán]
+\begin{equation}
+  B_z(z)=\frac{B_r}{2}\left[\frac{z+L}{\sqrt{(z+L)^2+R^2}}-\frac{z}{\sqrt{z^2+R^2}}\right]
+  \label{eq:campo}
+\end{equation}
+\end{resultado}
+
+\subsection{Paso 4: comprobaciones de la fórmula}
+\begin{itemize}
+  \item \textbf{En la cara} ($z=0$): $B_z(0)=\dfrac{B_r}{2}\dfrac{L}{\sqrt{L^2+R^2}}$. Para el prototipo,
+        $\ValCampoCaraIman$\,T.
+  \item \textbf{Imán muy largo} ($L\to\infty$, $z=0$): $B_z\to B_r/2$, el valor conocido en el extremo de un solenoide
+        semi-infinito.
+  \item \textbf{Campo lejano} ($z\gg R,L$): desarrollando en serie se obtiene
+        \[
+          B_z\approx\frac{B_r R^2 L}{2\,d^3},
+        \]
+        con $d$ la distancia al centro del imán. Es el campo de un dipolo $m=M\pi R^2L$ en su eje,
+        $B=\mu_0 m/(2\pi d^3)$. El paquete de pruebas verifica este límite.
+\end{itemize}
+
+\subsection{Paso 5: campo medio en el espesor de la bobina}
+Las espiras de la bobina no están en un único plano: ocupan desde su cara ($z=g$) hasta su cara posterior
+($z=g+h$), con $h=\ValAlturaBobina$\,mm. Lo correcto es promediar:
+\[
+  \bar B_z=\frac{1}{h}\int_g^{g+h}B_z(z)\,\dif z .
+\]
+\begin{enumerate}
+  \item Primitivas de cada término de \eqref{eq:campo}:
+        \[
+          \int\frac{z+L}{\sqrt{(z+L)^2+R^2}}\,\dif z=\sqrt{(z+L)^2+R^2},\qquad
+          \int\frac{z}{\sqrt{z^2+R^2}}\,\dif z=\sqrt{z^2+R^2}.
+        \]
+  \item Definimos $F(z)=\sqrt{(z+L)^2+R^2}-\sqrt{z^2+R^2}$.
+\end{enumerate}
+\begin{resultado}[Campo medio en la bobina]
+\begin{equation}
+  \bar B_z=\frac{B_r}{2h}\Big[F(g+h)-F(g)\Big]
+  \label{eq:campomedio}
+\end{equation}
+\end{resultado}
+\begin{nota}[Corrección respecto a la versión anterior del proyecto]
+El modelo original evaluaba $B_z$ sólo en $z=g$ (\ValCampoCaraBobina\,T). El promedio exacto da
+\ValCampoMedioBobina\,T: la versión anterior sobreestimaba el flujo, y por tanto la tensión, en un
+\ValReduccionPorPromedio\,\%.
+\end{nota}
+
+%=====================================================================
+\section{Flujo magnético y flujo concatenado}
+%=====================================================================
+El flujo a través de una superficie $S$ es $\Phi=\int_S\vect{B}\cdot\dif\vect{S}$ (\si{\weber}). Si una bobina
+tiene $N$ espiras que abrazan prácticamente el mismo flujo, el \emph{flujo concatenado} es $\Psi=N\Phi$.
+
+Para una espira enfrentada a un imán aproximamos
+\begin{equation}
+  \Phi_{max}=k\,\bar B_z\,\pi R^2,
+  \label{eq:flujo}
+\end{equation}
+donde $\pi R^2$ es el área de la cara del imán y $k\in(0,1]$ es el \textbf{factor de acoplamiento}, que agrupa
+lo que el modelo axial no recoge: la disminución de $B_z$ fuera del eje, el flujo de retorno que atraviesa las
+espiras exteriores en sentido contrario y la dispersión en el entrehierro. Se usa $k=\ValAcoplamiento$.
+
+%=====================================================================
+\section{Ley de Faraday (Sec.~9.2)}
+%=====================================================================
+\begin{equation}
+  \mathcal{E}=\oint_L\vect{E}\cdot\dif\vect{l}=-\frac{\dif\Psi}{\dif t}=-N\frac{\dif\Phi}{\dif t}.
+  \label{eq:faraday}
+\end{equation}
+\textbf{Forma diferencial paso a paso.} Para un contorno fijo:
+\begin{enumerate}
+  \item $\oint_L\vect{E}\cdot\dif\vect{l}=-\dfrac{\dif}{\dif t}\displaystyle\int_S\vect{B}\cdot\dif\vect{S}
+        =-\int_S\frac{\partial\vect{B}}{\partial t}\cdot\dif\vect{S}$ (el contorno no se mueve).
+  \item Teorema de Stokes: $\oint_L\vect{E}\cdot\dif\vect{l}=\int_S(\nabla\times\vect{E})\cdot\dif\vect{S}$.
+  \item Igualando para cualquier superficie $S$:
+        \begin{equation}\nabla\times\vect{E}=-\frac{\partial\vect{B}}{\partial t}.\end{equation}
+\end{enumerate}
+
+%=====================================================================
+\section{Fem de transformador y fem de movimiento (Sec.~9.3)}
+%=====================================================================
+Sadiku distingue tres casos:
+\begin{align}
+  \text{Espira fija, campo variable:}\quad &\mathcal{E}_{tr}=-\int_S\frac{\partial\vect{B}}{\partial t}\cdot\dif\vect{S},\\
+  \text{Espira móvil, campo estático:}\quad &\mathcal{E}_{m}=\oint_L(\vect{u}\times\vect{B})\cdot\dif\vect{l},\\
+  \text{Caso general:}\quad &\mathcal{E}=\mathcal{E}_{tr}+\mathcal{E}_{m}.
+\end{align}
+La fem de movimiento proviene de la fuerza de Lorentz $\vect{F}=q(\vect{E}+\vect{u}\times\vect{B})$: para una
+carga que se mueve con el conductor, $\vect{u}\times\vect{B}$ actúa como un campo eléctrico efectivo.
+
+\textbf{Aplicación al generador.}
+\begin{itemize}
+  \item \emph{Marco del estator}: las bobinas están quietas; en su posición el campo cambia al pasar polos
+        alternos: es una fem de \textbf{transformador}.
+  \item \emph{Marco del rotor}: el campo de los imanes es estático y son las bobinas las que se mueven con
+        $\vect{u}=-\bm{\omega}_m\times\vect{r}$: es una fem de \textbf{movimiento}.
+\end{itemize}
+Ambas descripciones dan el mismo resultado: para $u\ll c$ las transformaciones de los campos entre marcos se
+reducen a $\vect{E}'=\vect{E}+\vect{u}\times\vect{B}$, de modo que lo que en un marco aparece como
+$\partial\vect{B}/\partial t$ en el otro aparece como $\vect{u}\times\vect{B}$.
+
+%=====================================================================
+\section{Modelo del generador}
+%=====================================================================
+
+\subsection{Paso polar y frecuencia eléctrica}
+\begin{enumerate}
+  \item Con $P$ polos repartidos uniformemente, el \textbf{paso polar} es $\theta_p=2\pi/P$
+        (\ValPasoPolarGrados$^\circ$ para $P=\ValPolos$).
+  \item Un ciclo eléctrico completo (N $\to$ S $\to$ N frente a una bobina) requiere girar dos pasos polares,
+        $2\theta_p=4\pi/P$.
+  \item En una vuelta ($2\pi$) hay por tanto $P/2$ ciclos eléctricos.
+  \item Con $\text{RPM}/60$ vueltas por segundo:
+\end{enumerate}
+\begin{equation}
+  f_e=\frac{P}{2}\cdot\frac{\text{RPM}}{60}=\frac{P\cdot\text{RPM}}{120},\qquad
+  \omega_m=\frac{2\pi\,\text{RPM}}{60},\qquad \omega_e=2\pi f_e=\frac{P}{2}\,\omega_m .
+  \label{eq:frecuencia}
+\end{equation}
+
+\subsection{Forma del flujo en una bobina}
+El flujo que atraviesa una bobina es una función periódica del ángulo del rotor con periodo $2\theta_p$, y
+cambia de signo cada $\theta_p$ (polo N $\to$ polo S). Su primer armónico de Fourier es
+\begin{equation}
+  \Phi(t)=\Phi_{max}\cos(\omega_e t),
+\end{equation}
+tomando $t=0$ cuando un imán N está centrado sobre la bobina. El modelo conserva sólo este armónico
+fundamental, que es el que domina en topologías sin hierro con imanes circulares.
+
+\subsection{Fem de una bobina}
+Aplicando \eqref{eq:faraday}:
+\begin{enumerate}
+  \item $\dfrac{\dif\Phi}{\dif t}=-\Phi_{max}\,\omega_e\sin(\omega_e t)$ (regla de la cadena).
+  \item $\mathcal{E}_1(t)=-N\dfrac{\dif\Phi}{\dif t}=N\,\omega_e\,\Phi_{max}\sin(\omega_e t)$.
+\end{enumerate}
+
+\subsection{Conexión en serie con polaridad alternada}
+La bobina $j$ ($j=0,\dots,N_b-1$) está desplazada un ángulo $j\theta_p$, por lo que ve
+$\Phi_j(t)=\Phi_{max}\cos(\omega_e t-j\pi)=(-1)^j\,\Phi_{max}\cos(\omega_e t)$: las bobinas vecinas tienen flujos
+opuestos. Si todas se conectaran en el mismo sentido, sus fem se cancelarían por pares. Conectando la bobina $j$
+con signo $s_j=(-1)^j$ (final con final, inicio con inicio):
+\[
+  \mathcal{E}_{total}=\sum_{j=0}^{N_b-1}s_j\,\mathcal{E}_j=\sum_{j}(-1)^j(-1)^j\,N\omega_e\Phi_{max}\sin(\omega_e t)
+  =N_b N\,\omega_e\Phi_{max}\sin(\omega_e t).
+\]
+\begin{resultado}[Fem del generador]
+\begin{equation}
+  \mathcal{E}(t)=V_{pico}\sin(\omega_e t),\qquad V_{pico}=N_{total}\,\omega_e\,\Phi_{max},\qquad N_{total}=N_bN=\ValEspirasTotales .
+  \label{eq:fem}
+\end{equation}
+\end{resultado}
+
+\subsection{Valor eficaz}
+Por definición $V_{RMS}^2=\frac1T\int_0^T\mathcal{E}^2\dif t$. Usando $\sin^2x=\frac{1-\cos2x}{2}$ y que el coseno
+promedia cero en un periodo:
+\begin{equation}
+  V_{RMS}^2=\frac{V_{pico}^2}{T}\int_0^T\frac{1-\cos(2\omega_e t)}{2}\dif t=\frac{V_{pico}^2}{2}
+  \;\Rightarrow\; V_{RMS}=\frac{V_{pico}}{\sqrt2}.
+\end{equation}
+
+%=====================================================================
+\section{Circuito equivalente, potencia y ley de Lenz}
+%=====================================================================
+
+\subsection{Resistencia interna}
+Para una bobina con diámetros interior $D_i$ y exterior $D_e$, la espira media tiene diámetro $(D_i+D_e)/2$:
+\begin{equation}
+  \ell_m=\pi\frac{D_i+D_e}{2},\qquad R_{int}=\rho_{Cu}\frac{N_{total}\,\ell_m}{A_{Cu}},\qquad A_{Cu}=\frac{\pi d^2}{4}.
+\end{equation}
+\begin{nota}[Corrección]
+La versión anterior usaba un radio medio de 12\,mm; con $D_i=12$\,mm y $D_e=28$\,mm el radio medio real es
+10\,mm. Con el valor corregido, $R_{int}=\ValResistenciaInterna\,\Omega$.
+\end{nota}
+Al ser bobinas sin núcleo su inductancia es pequeña y $Z_{int}=R_{int}+j\omega_eL_{int}\approx R_{int}$.
+
+\subsection{Teorema de máxima transferencia de potencia}
+Con una carga resistiva $R_L$ (circuito de Thévenin, valores eficaces):
+\begin{enumerate}
+  \item $I=\dfrac{V_{RMS}}{R_{int}+R_L}$, \quad $P_L=I^2R_L=\dfrac{V_{RMS}^2R_L}{(R_{int}+R_L)^2}$.
+  \item Derivando respecto a $R_L$:
+        $\dfrac{\dif P_L}{\dif R_L}=V_{RMS}^2\dfrac{(R_{int}+R_L)-2R_L}{(R_{int}+R_L)^3}=V_{RMS}^2\dfrac{R_{int}-R_L}{(R_{int}+R_L)^3}$.
+  \item Se anula para $R_L=R_{int}$ (es un máximo: la derivada pasa de positiva a negativa).
+  \item $P_{max}=\dfrac{V_{RMS}^2}{4R_{int}}$, con rendimiento $\eta=\dfrac{R_L}{R_{int}+R_L}$, que vale \SI{50}{\percent}.
+\end{enumerate}
+
+\subsection{Ley de Lenz y par resistente}
+El signo menos de \eqref{eq:faraday} indica que la corriente inducida crea un flujo que se opone a la variación
+que la produjo. Mecánicamente:
+\begin{enumerate}
+  \item Cada tramo de conductor con corriente sufre $\dif\vect{F}=I\,\dif\vect{l}\times\vect{B}$ (Sec.~8.2).
+  \item La reacción sobre los imanes produce un par $\bm\tau=\vect{r}\times\vect{F}$ opuesto a $\bm\omega_m$.
+  \item Conservación de la energía: la potencia mecánica entregada al eje iguala la potencia eléctrica total
+        \begin{equation}
+          P_{mec}=\tau\,\omega_m=I^2(R_{int}+R_L)=P_L+P_{Cu}\quad\Rightarrow\quad\tau=\frac{P_L+P_{Cu}}{\omega_m}.
+        \end{equation}
+\end{enumerate}
+No hay energía gratuita: cuanto más corriente se extrae, más cuesta girar el rotor.
+
+%=====================================================================
+\section{Rectificación y filtrado}
+%=====================================================================
+\begin{enumerate}
+  \item En el puente de Graetz conducen dos diodos en serie en cada semiciclo; la tensión de pico disponible en la
+        salida es $V_{pico}-2V_D$.
+  \item El condensador $C$ se carga al valor de pico y, entre picos, alimenta la carga. Con rectificación de onda
+        completa los picos se repiten cada $1/(2f_e)$.
+  \item Si la carga extrae una corriente casi constante $I_{DC}$, el condensador pierde
+        $\Delta Q=I_{DC}/(2f_e)$ y su tensión cae $\Delta V=\Delta Q/C$:
+        \begin{equation}
+          V_{DC}\approx V_{pico}-2V_D,\qquad \Delta V_{pp}\approx\frac{I_{DC}}{2f_eC}.
+        \end{equation}
+\end{enumerate}
+Con diodos 1N4007 $V_D\approx0.7$\,V; con Schottky 1N5819 $V_D\approx\ValCaidaDiodo$\,V (valor del modelo).
+
+%=====================================================================
+\section{¿Por qué un estator sin núcleo de hierro?}
+%=====================================================================
+\begin{itemize}
+  \item \textbf{Con hierro}: $\mu_r\sim10^3$ aumenta el flujo, pero aparecen pérdidas por histéresis
+        ($\propto f\,B^{n}$), por corrientes parásitas ($\propto f^2B^2$) y un fuerte \emph{par de reluctancia}
+        (\emph{cogging}): el rotor ``se engancha'' en posiciones preferentes.
+  \item \textbf{Sin hierro (coreless)}: $\mu_r\approx1$, cero cogging, sin pérdidas en el núcleo, sin saturación.
+        El sistema es lineal y la ley de Faraday se verifica de forma limpia: ideal para un laboratorio.
+\end{itemize}
+
+%=====================================================================
+\section{Micro-red: batería, controlador de carga e inversor}
+%=====================================================================
+El generador alimenta una micro-red aislada: controlador DC-DC $\rightarrow$ batería de
+\ValBateriaTension\,V / \ValBateriaCapacidad\,Ah $\rightarrow$ inversor de \ValInversorTension\,V o
+\ValInversorTensionAlta\,V a \ValInversorFrecuencia\,Hz $\rightarrow$ bombillo de \ValPotenciaCargaAc\,W.
+La física electromagnética termina en la tensión del generador; el resto es teoría de circuitos y de
+electrónica de potencia, salvo el transformador del inversor, que vuelve a ser la ley de Faraday.
+
+\subsection{Modelo de la batería}
+\begin{enumerate}
+  \item Se modela como una fuente $E_{oc}$ que depende del estado de carga (SoC) en serie con una resistencia
+        $R_{bat}=\ValBateriaResistencia\,\Omega$:
+        \begin{equation}
+          E_{oc}(\text{SoC})=\ValBateriaVacia+\ValBateriaPendiente\cdot\text{SoC}\ \text{V},\qquad
+          V_{bat}=E_{oc}+I_{neta}R_{bat}.
+        \end{equation}
+  \item El SoC se integra con la corriente neta (conteo de Coulomb), con $Q=C\cdot\SI{3600}{\second}$:
+        \begin{equation}
+          \frac{\dif\,\text{SoC}}{\dif t}=\frac{I_{carga}-I_{descarga}}{Q}.
+        \end{equation}
+  \item Protección por baja tensión: el inversor se desconecta al \ValSocCorte\,\% y se reconecta al
+        \ValSocReconexion\,\%. La histéresis evita que la salida oscile en el umbral.
+\end{enumerate}
+
+\subsection{Controlador de carga con seguimiento del punto de máxima potencia}
+El generador es una fuente de Thévenin con $R_{int}=\ValResistenciaInterna\,\Omega$. Un controlador DC-DC que
+emula una carga $R_L=R_{int}$ extrae, por el teorema de máxima transferencia,
+\begin{equation}
+  P_{max}=\frac{V_{RMS}^2}{4R_{int}},\qquad
+  I_{carga}=\min\!\left(\frac{\eta_c\,P_{max}}{E_{oc}(\text{SoC})},\ I_{max},\ \frac{V_{abs}-E_{oc}}{R_{bat}}\right),
+\end{equation}
+con $\eta_c=\ValControladorEficiencia$\,\%, $I_{max}=\ValControladorCorrienteMax$\,A y
+$V_{abs}=\ValControladorAbsorcion$\,V. El controlador no arranca si $V_{DC}<\ValControladorArranque$\,V.
+\begin{nota}[Corrección]
+La versión modificada del proyecto calculaba la potencia con $V_{DC}^2/(4R_{int})$. Como
+$V_{DC}\approx V_{pico}=\sqrt2\,V_{RMS}$, eso duplicaba la potencia disponible. La forma correcta usa el valor
+eficaz de la fem.
+\end{nota}
+
+\subsection{Inversor y transformador elevador (Sec.~8.8 y 9.3)}
+\begin{enumerate}
+  \item Un puente de MOSFET conmuta la batería con modulación senoidal (SPWM); el filtro LC deja sólo el
+        armónico fundamental de \ValInversorFrecuencia\,Hz.
+  \item El transformador eleva la tensión por la fem de transformador: ambos devanados comparten el flujo
+        $\Phi(t)$, y por Faraday $v_1=N_1\,\dif\Phi/\dif t$ y $v_2=N_2\,\dif\Phi/\dif t$. Por tanto
+        \begin{equation}
+          \frac{V_2}{V_1}=\frac{N_2}{N_1}\approx\frac{\ValInversorPico\ \text{V}}{\ValBateriaTension\ \text{V}}
+          \approx\ValRelacionEspiras .
+        \end{equation}
+  \item Balance de potencia con eficiencia $\eta_{inv}=\ValInversorEficiencia$\,\%:
+        \begin{equation}
+          P_{in}=\frac{P_{AC}}{\eta_{inv}},\qquad I_{descarga}=\frac{P_{AC}}{\eta_{inv}\,E_{oc}}.
+        \end{equation}
+\end{enumerate}
+
+\subsection{Balance energético y velocidad de equilibrio}
+La potencia neta que recibe la batería es
+\begin{equation}
+  P_{neta}=\eta_c\frac{V_{RMS}^2}{4R_{int}}-\frac{P_{AC}}{\eta_{inv}}.
+\end{equation}
+Como $V_{RMS}\propto\text{RPM}$, la velocidad que equilibra el consumo ($P_{neta}=0$) es
+\begin{equation}
+  \text{RPM}_{eq}=\text{RPM}_{ref}\,\frac{\sqrt{4R_{int}P_{AC}/(\eta_c\eta_{inv})}}{V_{RMS}(\text{RPM}_{ref})}.
+\end{equation}
+\begin{resultado}
+Para el bombillo de \ValPotenciaCargaAc\,W se necesitan $\approx\ValRpmEquilibrio$\,RPM, por encima del rango
+del prototipo (1200\,RPM). Por tanto el generador \textbf{recarga} la batería y es la batería la que
+\textbf{alimenta} el inversor. Una carga de \ValPotenciaCargaReducida\,W se equilibra a
+$\approx\ValRpmEquilibrioReducida$\,RPM.
+\end{resultado}
+
+%=====================================================================
+\section{Hipótesis y limitaciones del modelo}
+%=====================================================================
+\begin{enumerate}
+  \item Se usa el campo \emph{en el eje} del imán; fuera del eje $B_z$ es menor (lo absorbe $k$).
+  \item Se conserva sólo el armónico fundamental del flujo.
+  \item Se desprecian la inductancia de las bobinas y la variación de $\rho_{Cu}$ con la temperatura
+        ($\approx\SI{0.39}{\percent\per\kelvin}$).
+  \item El rotor es de una sola cara y sin placa de retorno de hierro; un rotor doble (imanes a ambos lados del
+        estator) aproximadamente duplicaría el flujo.
+  \item $k$ debe calibrarse con la medición: $k_{real}=k\cdot V_{\text{medido}}/V_{\text{teórico}}$.
+\end{enumerate}
+
+%=====================================================================
+\section{Resumen de fórmulas}
+%=====================================================================
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.6}
+\begin{tabular}{p{5.2cm}p{7.6cm}c}
+\toprule
+Magnitud & Expresión & Unidad\\
+\midrule
+Velocidad angular mecánica & $\omega_m=2\pi\,\text{RPM}/60$ & rad/s\\
+Frecuencia eléctrica & $f_e=P\cdot\text{RPM}/120$ & Hz\\
+Campo axial del imán & $B_z=\frac{B_r}{2}\Big[\frac{z+L}{\sqrt{(z+L)^2+R^2}}-\frac{z}{\sqrt{z^2+R^2}}\Big]$ & T\\
+Campo medio en la bobina & $\bar B_z=\frac{B_r}{2h}\big[F(g+h)-F(g)\big]$ & T\\
+Flujo máximo por espira & $\Phi_{max}=k\,\bar B_z\,\pi R^2$ & Wb\\
+Fem pico total & $V_{pico}=N_{total}\,\omega_e\,\Phi_{max}$ & V\\
+Fem eficaz & $V_{RMS}=V_{pico}/\sqrt2$ & V\\
+Tensión rectificada & $V_{DC}\approx V_{pico}-2V_D$ & V\\
+Rizado & $\Delta V_{pp}\approx I_{DC}/(2f_eC)$ & V\\
+Resistencia interna & $R_{int}=\rho_{Cu}N_{total}\pi(D_i+D_e)/(2A_{Cu})$ & $\Omega$\\
+Potencia en la carga & $P_L=V_{RMS}^2R_L/(R_{int}+R_L)^2$ & W\\
+Par resistente (Lenz) & $\tau=(P_L+P_{Cu})/\omega_m$ & N·m\\
+Tensión de la batería & $E_{oc}=\ValBateriaVacia+\ValBateriaPendiente\cdot\text{SoC}$ & V\\
+Corriente de carga (MPPT) & $I_{carga}=\eta_cV_{RMS}^2/(4R_{int}E_{oc})$ & A\\
+Relación del transformador & $V_2/V_1=N_2/N_1$ & --\\
+Corriente del inversor & $I_{descarga}=P_{AC}/(\eta_{inv}E_{oc})$ & A\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Los valores numéricos de cada una de estas magnitudes para el prototipo se calculan paso a paso en el
+\textbf{Documento 2: Memoria de cálculo}.
+
+\end{document}

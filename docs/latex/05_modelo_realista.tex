@@ -1,0 +1,255 @@
+\documentclass[11pt]{article}
+\newcommand{\nombredocumento}{05 · Modelo realista}
+\input{comun/preambulo.tex}
+
+\begin{document}
+
+\portada{Modelo realista}
+        {Dinámica del rotor, forma de onda real, electrónica con sus límites, batería de plomo-ácido, inversor y temperatura}
+        {Documento 5 de 5 · Simulación dinámica del sistema completo}
+
+\tableofcontents
+\newpage
+
+%=====================================================================
+\section{Del modelo ideal al modelo realista}
+%=====================================================================
+Los Documentos~1 y~2 describen el generador en \textbf{régimen permanente} con hipótesis de libro de texto:
+la velocidad se impone, el flujo es senoidal ($\Phi=k\bar B_zA\cos\theta_e$), la fuente tiene solo resistencia,
+la batería es una fuente ideal con resistencia y el inversor tiene eficiencia constante. Esas hipótesis son
+excelentes para dimensionar, pero no describen lo que se observa al construir el prototipo:
+\begin{itemize}
+  \item el rotor \textbf{no gira a la velocidad que uno quiere}: gira a la que resulta del equilibrio entre el par
+        que se aplica, el rozamiento y el \textbf{frenado de Lenz} de la corriente que entrega;
+  \item la fem \textbf{no es senoidal}: su forma la decide el solape geométrico entre el imán circular y la bobina;
+  \item la batería \textbf{no es una fuente ideal}: su tensión sube al cargar (polarización), el controlador cambia
+        de etapa (MPPT, absorción, flotación) y la capacidad depende de la corriente (Peukert);
+  \item el inversor \textbf{consume aunque no haya carga} y se desconecta por baja tensión;
+  \item las bobinas \textbf{se calientan}: la resistencia del cobre sube y el imán pierde remanencia.
+\end{itemize}
+
+El modelo realista integra en el tiempo todas esas físicas acopladas. Está implementado en Python
+(\archivo{dominio/realista.py}, \archivo{dominio/dinamica.py}, \archivo{aplicacion/simulacion_dinamica.py}) y,
+operación por operación, en el visualizador (\archivo{visualizador_3d/js/modelo/dinamica.js}). La prueba
+\archivo{tests/test_paridad_visualizador.py} compara ambas implementaciones paso a paso en cuatro guiones
+(arranque, absorción, flotación y corte por baja tensión) con tolerancia relativa $10^{-9}$.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+  caja/.style={draw=#1,fill=#1!8,rounded corners=3pt,minimum height=0.95cm,align=center,font=\footnotesize,
+               text width=2.3cm},
+  flecha/.style={-{Stealth[length=2.2mm]},thick,Gris}]
+  \node[caja=Azul] (eje) {Fuente motriz\\$\tau(\omega)$};
+  \node[caja=Azul,right=0.5cm of eje] (rotor) {Rotor\\$J\,\dot\omega$};
+  \node[caja=Naranja,right=0.5cm of rotor] (fem) {Fem real\\$-N\omega_e\,\phi'(\theta_e)$};
+  \node[caja=Naranja,right=0.5cm of fem] (bob) {Bobinas\\$R(T),\ L$};
+  \node[caja=Cian,below=1.3cm of bob] (puente) {Puente y $C$\\rizado};
+  \node[caja=Cian,left=0.5cm of puente] (mppt) {Controlador\\de carga MPPT};
+  \node[caja=Verde,left=0.5cm of mppt] (bat) {Batería\\Thévenin + $V_p$};
+  \node[caja=Verde,left=0.5cm of bat] (inv) {Inversor\\$P_0+P+kP^2$};
+  \node[caja=Rojo,right=0.9cm of bob,yshift=-1.12cm] (term) {Nodo térmico\\$C_t\,\dot T$};
+  \draw[flecha] (eje) -- (rotor);
+  \draw[flecha] (rotor) -- (fem);
+  \draw[flecha] (fem) -- (bob);
+  \draw[flecha] (bob) -- (puente);
+  \draw[flecha] (puente) -- (mppt);
+  \draw[flecha] (mppt) -- (bat);
+  \draw[flecha] (bat) -- (inv);
+  \draw[flecha,Rojo] (mppt.north) -- ++(0,0.45) -| node[pos=0.25,above,font=\scriptsize]{par de Lenz $P_{em}/\omega$} (rotor.south);
+  \draw[flecha,Rojo] (bob.east) -| node[pos=0.25,above,font=\scriptsize]{$P_{Cu}+P_F$} (term.north);
+  \draw[flecha,Rojo] (term.south) |- node[pos=0.75,below,font=\scriptsize]{$R(T)$, $B_r(T)$} (puente.east);
+\end{tikzpicture}
+\caption{Acoplamientos del modelo realista. Las flechas rojas son las realimentaciones que el modelo ideal ignora.}
+\end{figure}
+
+%=====================================================================
+\section{Forma de onda real de la fem}
+%=====================================================================
+El imán es un disco de radio $r_m=\ValRadioIman$ mm y cada espira de la bobina es una circunferencia de radio
+$\rho$ entre $D_i/2$ y $D_e/2$. Si $\bar B_z$ es uniforme sobre la huella del imán y nulo fuera de ella, el
+flujo que concatena una espira es $\bar B_z$ por el área de intersección de dos círculos (una ``lente''):
+\begin{multline*}
+  A_{lente}(\rho,r_m,d)=\rho^2\arccos\frac{d^2+\rho^2-r_m^2}{2d\rho}+r_m^2\arccos\frac{d^2+r_m^2-\rho^2}{2dr_m}\\
+  -\tfrac12\sqrt{(-d+\rho+r_m)(d+\rho-r_m)(d-\rho+r_m)(d+\rho+r_m)},
+\end{multline*}
+donde $d$ es la distancia entre centros. Al girar el rotor, los imanes de polaridad alterna pasan sobre la
+bobina; sumando su contribución con signo y promediando sobre las espiras (repartidas uniformemente en $\rho$):
+\[
+  \phi(\theta_e)=\frac{\Phi}{\bar B_zA_{im}}=\frac{1}{A_{im}}\Big\langle\sum_k(-1)^kA_{lente}\big(\rho,r_m,d_k(\theta_e)\big)\Big\rangle_\rho,
+  \qquad e(t)=-N_{total}\,\bar B_zA_{im}\,\omega_e\,\frac{d\phi}{d\theta_e}.
+\]
+El perfil se evalúa con \ValPuntosRadiales\ radios y \ValMuestrasPerfil\ muestras por periodo eléctrico.
+
+\begin{resultado}[Resultado · forma de onda]
+\begin{itemize}
+  \item Flujo máximo normalizado $\phi_{max}=\ValFlujoMaximoReal$: confirma el factor de acoplamiento
+        $k=\ValAcoplamiento$ que se supuso en el Documento~2.
+  \item Factor de cresta de la fem $=\ValFactorCresta$ (una senoide tiene $\sqrt2=1.414$): la onda es
+        \textbf{más aplanada}, casi trapezoidal.
+  \item $E_{RMS,real}/E_{RMS,ideal}=\sqrt2\,\mathrm{rms}(\phi')/k=\ValRelacionFemRealIdeal$: el modelo ideal
+        sobreestima la fem eficaz en un $\approx$7\,\%.
+\end{itemize}
+\end{resultado}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\linewidth]{09_onda_real_vs_senoidal.png}
+\caption{Flujo normalizado y fem por solape imán–espira frente al modelo senoidal ideal.}
+\end{figure}
+
+%=====================================================================
+\section{Circuito eléctrico con sus límites}
+%=====================================================================
+\subsection{Bobinas: resistencia con temperatura e inductancia}
+\begin{gather*}
+  R(T)=R_{20}\,\big[1+\alpha_{Cu}(T-20\,^\circ\text{C})\big],\qquad \alpha_{Cu}=\ValCoefCobre\ \text{\%/K};\\
+  L_{bobina}=\frac{0.8\,N^2\bar r^2}{6\bar r+9h+10c}\ \text{(Wheeler, en pulgadas)}=\ValInductanciaBobinaMili\ \text{mH}.
+\end{gather*}
+Las ocho bobinas en serie suman $L=\ValInductanciaTotalMili$ mH, con reactancia $X=\omega_eL$. Como el estator
+no tiene hierro, no hay par de retención (\emph{cogging}) ni histéresis; sí hay pequeñas corrientes de Foucault en
+el propio cobre: $P_F=\ValPerdidasFoucaultMili$ mW a \ValRpmRegimenRef\ RPM.
+
+\subsection{Puente rectificador, condensador y controlador MPPT}
+Con corriente eficaz $I$, la potencia que llega al bus DC es
+\[
+  P_{DC}(I)=I\sqrt{E^2-X^2I^2}-RI^2-2V_D\,\bar I,\qquad \bar I=\tfrac{2\sqrt2}{\pi}I .
+\]
+El controlador busca $dP_{DC}/dI=0$ (bisección), pero no puede bajar el bus de \ValControladorArranque\ V, y
+limita la potencia de salida por la tensión de la batería (absorción \ValControladorAbsorcion\ V; flotación
+\ValControladorFlotacion\ V cuando SoC $\ge$ \ValBateriaSocFlotacion\,\%) y por corriente (\ValControladorCorrienteMax\ A).
+El rizado del bus es
+\[
+  \Delta V=\frac{\bar I}{2f_eC}.
+\]
+
+\begin{advertencia}[Hallazgo · el condensador de 220 µF es insuficiente]
+Con 0.2 N·m el rizado es de \ValRizadoBajo\ V con \ValCapacitanciaMicro\ µF y de \ValRizadoAlto\ V con 4700 µF.
+El generador entrega corriente a baja frecuencia (decenas de Hz), por lo que el condensador debe ser de
+miles de microfaradios. El visualizador lo señala con una alerta en la tarjeta de tensión DC y permite elegir
+220, 1000, 2200 o 4700 µF.
+\end{advertencia}
+
+%=====================================================================
+\section{Batería de plomo-ácido}
+%=====================================================================
+Se usa el circuito equivalente de Thévenin de primer orden (corriente $I>0$ cargando):
+\begin{align*}
+  V_{bornes}&=E_{oc}(\text{SoC})+V_p+R_0I, &
+  \tau\,\dot V_p&=R_p(\text{SoC},I)\,I-V_p,\\
+  R_p&=R_{p0}\,\big[1+A\,e^{B(\text{SoC}-1)}\big]\ (I>0), &
+  \dot{\text{SoC}}&=\frac{\eta_c(\text{SoC})\,I}{C}\ \text{(carga)},\quad
+  \dot{\text{SoC}}=-\frac{I_{ef}}{C}\ \text{(descarga)}.
+\end{align*}
+
+\begin{table}[H]
+\centering
+\caption{Parámetros de la batería (12 V, \ValBateriaCapacidad\ Ah, AGM).}
+\begin{tabular}{llr}
+\toprule
+Símbolo & Descripción & Valor\\
+\midrule
+$R_0$ & Resistencia óhmica & \ValBateriaRCero\ m$\Omega$\\
+$R_{p0}$, $\tau$ & Polarización (difusión del electrolito) & \ValBateriaRPolarizacion\ m$\Omega$, \ValBateriaTau\ s\\
+$A$, $B$ & Sobrepotencial de gasificación al final de la carga & \ValBateriaFactorGas, \ValBateriaPendienteGas\\
+$k_P$ & Exponente de Peukert (régimen C/20) & \ValBateriaPeukert\\
+$\eta_c$ & Eficiencia coulómbica (por encima del \ValBateriaSocGas\,\% baja a \ValBateriaEtaLlena\,\%) & \ValBateriaEtaCoulomb\,\%\\
+-- & Autodescarga & \ValBateriaAutodescarga\,\%/mes\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{nota}[Acoplamiento implícito]
+Al imponer la tensión de absorción, el controlador y la polarización de la batería forman un lazo muy rápido.
+Con un paso explícito el lazo oscila; por eso la batería se evalúa con la polarización \emph{al final} del paso:
+con retención $a=e^{-h/\tau}$, $E_{ef}=E_{oc}+V_pa$ y $R_{ef}=R_0+R_p(1-a)$. Es un esquema implícito exacto
+para el circuito lineal, estable para cualquier factor de aceleración del tiempo.
+\end{nota}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\linewidth]{12_ciclo_de_carga_bateria.png}
+\caption{Ciclo de carga completo desde el 80\,\% con 0.30 N·m: MPPT hasta las \ValHorasHastaAbsorcion\ h, absorción
+a \ValControladorAbsorcion\ V hasta las \ValHorasHastaFlotacion\ h y flotación con \ValCorrienteFlotacionMili\ mA.}
+\end{figure}
+
+%=====================================================================
+\section{Inversor y controlador}
+%=====================================================================
+\[
+  P_{entrada}=P_0+P_{AC}+k\,P_{AC}^2,\qquad P_0=\ValInversorVacio\ \text{W},\quad
+  k=\ValInversorCoefCuadratico\times10^{-4}\ \text{W}^{-1}\ (\eta=\ValInversorEficiencia\text{\,\% a }\ValInversorNominal\ \text{W}).
+\]
+El inversor se desconecta cuando la tensión en bornes baja de \ValInversorCorte\ V y vuelve a conectarse por
+encima de \ValInversorReconexion\ V (histéresis). El controlador consume \ValConsumoControladorMili\ mA de la
+batería permanentemente. Con 15 W de carga el inversor toma \ValPotenciaEntradaInversorRef\ W: con
+\ValParReferencia\ N·m la batería se descarga a \ValCorrienteNetaConCarga\ A.
+
+%=====================================================================
+\section{Dinámica del rotor}
+%=====================================================================
+\[
+  J\,\dot\omega=\tau_{motriz}(\omega)-\frac{P_{em}+P_F}{\omega}-\tau_{roz}(\omega),\qquad
+  \tau_{motriz}=\tau_{aj}\Big(1-\frac{\omega}{\omega_0}\Big),\qquad
+  \tau_{roz}=T_c+b\,\omega+k_v\omega^2 .
+\]
+\begin{itemize}
+  \item $J=\ValInerciaRotor\times10^{-4}$ kg·m² (disco de PLA menos los alojamientos, imanes NdFeB y eje de acero).
+  \item Rozamiento de los rodamientos 608 y del aire: $T_c=\ValParCoulombMili$ mN·m (con rozamiento estático en
+        reposo), $b=\ValCoefViscosoMicro$ µN·m·s, $k_v=\ValCoefVentilacionNano$ nN·m·s².
+  \item Fuente motriz lineal (motor DC o manivela) con velocidad en vacío $\omega_0=\ValVelocidadVacioMotriz$ RPM
+        y par ajustable hasta \ValParMaximoMotriz\ N·m.
+  \item Integración con subpasos de \ValPasoIntegracionMili\ ms; las variables lentas (SoC, $V_p$, $T$) avanzan con
+        el factor de aceleración del tiempo y la mecánica siempre en tiempo real.
+\end{itemize}
+
+\begin{resultado}[Resultado · régimen con \ValParReferencia\ N·m]
+Velocidad \ValRpmRegimenRef\ RPM; potencia en el eje \ValPotenciaEjeRef\ W; potencia electromagnética
+\ValPotenciaElectromagneticaRef\ W; pérdidas en el cobre \ValPerdidasCobreRef\ W y por rozamiento
+\ValPerdidasRozamientoRef\ W; a la batería llegan \ValPotenciaBateriaRef\ W (eficiencia eje $\rightarrow$ batería
+del \ValEficienciaRef\,\%). Con el par máximo (\ValParMaximoMotriz\ N·m) el rotor gira a \ValRpmParMaximo\ RPM y
+carga con \ValPotenciaBateriaParMaximo\ W.
+\end{resultado}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\linewidth]{10_arranque_impulso_y_frenado.png}
+\caption{Arriba: arranque desde reposo. Abajo: impulso con la mano (\ValParImpulso\ N·m durante
+\ValDuracionImpulso\ s): pico de \ValRpmPicoImpulso\ RPM y parada \ValTiempoParadaImpulso\ s después. La corriente
+de carga frena el rotor (ley de Lenz).}
+\end{figure}
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\linewidth]{11_regimen_vs_par_motriz.png}
+\caption{Régimen permanente según el par. A bajo par el controlador queda limitado por la tensión mínima del bus
+(\ValControladorArranque\ V) y opera con menos corriente, lo que explica el máximo local de eficiencia.}
+\end{figure}
+
+%=====================================================================
+\section{Modelo térmico}
+%=====================================================================
+\[
+  C_t\,\dot T=P_{Cu}+P_F-hA\,(T-T_{amb}),\qquad h=h_n+h_f\,\omega,\qquad
+  B_r(T)=B_{r,20}\,\big[1+\alpha_B(T_{amb}-20\,^\circ\text{C})\big].
+\]
+Con $C_t=\ValCapacidadTermica$ J/K, $h_n=\ValConveccionNatural$ W/m²K, $h_f=\ValConveccionForzada$ W/m²K por
+rad/s, $\alpha_B=\ValCoefRemanencia$\,\%/K. Con \ValParReferencia\ N·m las bobinas se estabilizan en
+\ValTemperaturaRegimenRef\ °C; el visualizador avisa si superan \ValTemperaturaMaximaPla\ °C, temperatura a la que
+el PLA empieza a ablandarse.
+
+%=====================================================================
+\section{Verificación}
+%=====================================================================
+\begin{itemize}
+  \item \archivo{tests/test_modelo_realista.py}: geometría de la lente, perfil de flujo, Wheeler, inercia, MPPT,
+        rizado, batería (polarización, Peukert, gasificación), inversor, validaciones, equilibrio de pares,
+        \textbf{conservación de la energía} en cada paso, frenado de Lenz, etapas de carga, histéresis del corte y
+        calentamiento.
+  \item \archivo{tests/test_paridad_visualizador.py}: Python y JavaScript dan los mismos parámetros, perfil,
+        inercia y serie temporal completa en cuatro guiones.
+  \item \archivo{tests/test_interfaz_visualizador.py}: en un navegador real, cada control de la interfaz se acciona
+        y lo que muestra el panel se compara con \texttt{SimulacionDinamica} de Python en el mismo estado.
+\end{itemize}
+
+\end{document}

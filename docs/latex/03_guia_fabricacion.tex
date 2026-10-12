@@ -1,0 +1,627 @@
+\documentclass[11pt]{article}
+\newcommand{\nombredocumento}{03 · Guía de fabricación}
+\input{comun/preambulo.tex}
+
+\begin{document}
+
+\portada{Guía de fabricación paso a paso}
+        {Construcción, conexión, rectificación y ensayo del generador de flujo axial sin núcleo}
+        {Documento 3 de 5 · Procedimiento práctico}
+
+\tableofcontents
+\newpage
+
+%=====================================================================
+\section{Qué se va a construir}
+%=====================================================================
+El prototipo es un \textbf{generador de flujo axial sin núcleo} (\emph{coreless AFPMG}): un disco giratorio
+(rotor) con imanes permanentes enfrenta a un disco fijo (estator) con bobinas de aire. Al girar, el flujo
+magnético que atraviesa cada bobina cambia periódicamente y, por la ley de Faraday (Documento~1), aparece una
+fuerza electromotriz alterna. Un puente rectificador la convierte en tensión continua que enciende un LED y,
+mediante un controlador de carga, recarga una batería de \ValBateriaTension\ V que alimenta un inversor de
+\ValInversorTension\ V / \ValInversorTensionAlta\ V con un bombillo de \ValPotenciaCargaAc\ W.
+
+\begin{table}[H]
+\centering
+\caption{Especificación del prototipo (valores tomados del modelo).}
+\begin{tabular}{ll}
+\toprule
+Elemento & Especificación\\
+\midrule
+Rotor & Disco $\varnothing$110 × 6 mm, \ValPolos\ imanes \ValGradoIman\ $\varnothing$\ValDiametroIman\ × \ValEspesorIman\ mm a radio \ValRadioMontaje\ mm\\
+Polaridad del rotor & Alternada N-S-N-S-N-S-N-S (paso polar \ValPasoPolarGrados$^\circ$)\\
+Estator & Disco $\varnothing$120 × 5 mm, \ValBobinas\ bobinas a radio \ValRadioMontaje\ mm\\
+Bobina & \ValEspiras\ espiras AWG~\ValCalibreAWG; $\varnothing_{int}$ \ValDiametroInteriorBobina\ mm, $\varnothing_{ext}$ \ValDiametroExteriorBobina\ mm, altura \ValAlturaBobina\ mm\\
+Conexión & Las \ValBobinas\ bobinas en serie, con polaridad alternada (\ValEspirasTotales\ espiras en total)\\
+Entrehierro & \ValEntrehierro\ mm entre la cara de los imanes y la cara de las bobinas\\
+Resistencia interna & \ValResistenciaInterna\ $\Omega$ (a 20\,$^\circ$C)\\
+Salida a \ValRpmReferencia\ RPM & $V_{pico}=\ValTensionPicoRef$ V, $V_{RMS}=\ValTensionRmsRef$ V, $V_{DC}=\ValTensionDcRef$ V, $f_e=\ValFrecuenciaRef$ Hz\\
+Micro-red & Batería \ValBateriaTension\ V / \ValBateriaCapacidad\ Ah y controlador de carga a \ValControladorAbsorcion\ V\\
+Inversor & \ValInversorTension\ V o \ValInversorTensionAlta\ V, \ValInversorFrecuencia\ Hz, bombillo de \ValPotenciaCargaAc\ W\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{nota}[Ventajas del diseño sin núcleo]
+Al no haber hierro en el estator no existe \emph{cogging} (par de retención): el rotor gira suave desde
+velocidad cero. Tampoco hay pérdidas por histéresis ni corrientes de Foucault en el núcleo, de modo que la
+tensión generada es proporcional a la velocidad (comportamiento lineal) y el modelo analítico es muy fiel.
+\end{nota}
+
+\subsection{Orden de trabajo}
+\begin{center}
+\begin{tikzpicture}[
+  fase/.style={draw=Cian,fill=Cian!8,rounded corners,minimum width=2.5cm,minimum height=1.1cm,align=center,font=\small},
+  flecha/.style={-{Stealth[length=2.5mm]},thick,Gris}]
+  \node[fase] (f0) {Fase 0\\Impresión 3D};
+  \node[fase,right=0.8cm of f0,yshift=0.8cm] (f1) {Fase 1\\Bobinas y estator};
+  \node[fase,right=0.8cm of f0,yshift=-0.8cm] (f2) {Fase 2\\Rotor};
+  \node[fase,right=0.8cm of f1,yshift=-0.8cm] (f3) {Fase 3\\Ensamble};
+  \node[fase,right=0.6cm of f3] (f4) {Fase 4\\Electrónica};
+  \node[fase,below=0.7cm of f4] (f5) {Fase 5\\Micro-red};
+  \node[fase,left=0.6cm of f5] (f6) {Fase 6\\Pruebas};
+  \draw[flecha] (f0.east) -- (f1.west);
+  \draw[flecha] (f0.east) -- (f2.west);
+  \draw[flecha] (f1.east) -- (f3.west);
+  \draw[flecha] (f2.east) -- (f3.west);
+  \draw[flecha] (f3) -- (f4);
+  \draw[flecha] (f4) -- (f5);
+  \draw[flecha] (f5) -- (f6);
+\end{tikzpicture}
+\end{center}
+Las fases 1 y 2 son independientes y pueden hacerse en paralelo (por ejemplo, mientras cura el epoxi del rotor
+se bobinan las bobinas).
+
+%=====================================================================
+\section{Seguridad con imanes de neodimio}
+%=====================================================================
+\begin{advertencia}[Lea esto antes de abrir el paquete de imanes]
+\begin{enumerate}
+  \item \textbf{Pellizcos}: a menos de 10 cm dos imanes \ValGradoIman\ se atraen con fuerza suficiente para
+        lesionar los dedos. Manipúlelos de uno en uno y mantenga los dedos fuera de la línea de impacto.
+  \item \textbf{Fragilidad}: son cerámicos sinterizados recubiertos de níquel; si chocan entre sí se astillan
+        y lanzan fragmentos cortantes. Use gafas de protección.
+  \item \textbf{Separación}: para separar dos imanes, deslícelos lateralmente sobre el borde de una mesa; nunca
+        tire de frente.
+  \item \textbf{Electrónica y marcapasos}: mantenga tarjetas, teléfonos, relojes y marcapasos a más de 30 cm.
+  \item \textbf{Temperatura}: el grado N pierde magnetización por encima de unos 80\,$^\circ$C. No suelde cerca
+        de los imanes ni use pistola de calor sobre el rotor.
+\end{enumerate}
+\end{advertencia}
+
+\begin{advertencia}[Rotación]
+A velocidades de taladro (más de 600 RPM) un imán mal pegado sale despedido. Respete el tiempo de curado del
+epoxi (Fase 2), use gafas y no se coloque en el plano del rotor durante los ensayos.
+\end{advertencia}
+
+%=====================================================================
+\section{Materiales y herramientas}
+%=====================================================================
+\subsection{Lista de materiales}
+\begin{table}[H]
+\centering
+\caption{Lista de materiales. Los costos son orientativos.}
+\small
+\begin{tabularx}{\textwidth}{clXcc}
+\toprule
+\# & Componente & Especificación & Cant. & USD\\
+\midrule
+1 & Imanes NdFeB & Disco $\varnothing$\ValDiametroIman\ × \ValEspesorIman\ mm, grado \ValGradoIman\ o superior & 8 (+1) & 8–12\\
+2 & Alambre magneto & Cobre esmaltado AWG~\ValCalibreAWG\ ($\varnothing$\ValDiametroCobre\ mm de cobre); se usan \ValLongitudAlambreTotal\ m $\approx$ 104 g & carrete 150 g & 5–8\\
+3 & Rodamientos & 608-ZZ o 608-2RS ($\varnothing$8 × $\varnothing$22 × 7 mm) & 2 & 2–4\\
+4 & Eje & Varilla roscada o eje liso $\varnothing$8 × 150 mm, 6 tuercas y 6 arandelas M8 & 1 & 2\\
+5 & Discos & Impresos en PLA/PETG (STL incluidos) o acrílico de 5–6 mm & 2 & 3–6\\
+6 & Epoxi & Resina bicomponente de curado lento & 1 tubo & 3\\
+7 & Diodos & 1N5819 (Schottky, $V_D\approx\ValCaidaDiodo$ V) o 1N4007 ($V_D\approx0.7$ V) & 4 & 1\\
+8 & Condensador & Electrolítico \ValCapacitanciaMicro\ $\mu$F × \ValTensionNominalCondensador\ V & 1 & 0.5\\
+9 & Indicador & LED de alto brillo + resistencia \ValResistenciaLed\ $\Omega$, \ValPotenciaNominalResistenciaLed\ W & 1 + 1 & 0.5\\
+10 & Bornes & Bornes banana o clema de 2 polos & 2 juegos & 1\\
+11 & Batería & Plomo-ácido sellada (SLA/AGM) \ValBateriaTension\ V / \ValBateriaCapacidad\ Ah & 1 & 15–20\\
+12 & Controlador de carga & DC-DC buck-boost con límite de corriente (CC/CV) o MPPT de 12 V, arranque $\le$\ValControladorArranque\ V, salida \ValControladorAbsorcion\ V & 1 & 6–15\\
+13 & Protección DC & Portafusible aéreo + fusible de 10 A, diodo Schottky 1N5822, cable AWG~14 & 1 juego & 3\\
+14 & Inversor & 12 V DC $\rightarrow$ \ValInversorTension\ V o \ValInversorTensionAlta\ V, \ValInversorFrecuencia\ Hz, onda senoidal pura, \ValInversorNominal\ W, con corte por baja tensión & 1 & 20–35\\
+15 & Carga AC & Tomacorriente en caja plástica, fusible de 1 A, roseta E27 y bombillo LED de \ValPotenciaCargaAc\ W & 1 juego & 5\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{nota}[Por qué \ValTensionNominalCondensador\ V y \ValResistenciaLed\ $\Omega$]
+A \ValRpmMaxima\ RPM el modelo predice $V_{DC}=\ValTensionDcMaxima$ V. Un condensador común de 25 V se dañaría;
+uno de \ValTensionNominalCondensador\ V conserva un margen del \ValMargenCondensador\,\%. Con esa tensión, una
+resistencia de 1 k$\Omega$ disiparía unos 0.74 W y el LED recibiría unos 27 mA (por encima de sus
+\ValCorrienteLedLimiteMili\ mA). Con \ValResistenciaLed\ $\Omega$ la corriente máxima es
+\ValCorrienteLedMaxMili\ mA y la resistencia disipa \ValPotenciaResistenciaLedMax\ W, dentro de su potencia nominal
+de \ValPotenciaNominalResistenciaLed\ W. El cálculo completo está en el Documento~2.
+\end{nota}
+
+\subsection{Herramientas}
+\begin{itemize}
+  \item Multímetro digital con escalas de tensión AC/DC, resistencia (200 $\Omega$) y, si es posible, frecuencia.
+  \item Cautín, estaño y pasta fundente; tubo termorretráctil.
+  \item Lija fina (grano 400–600) o cúter para retirar el esmalte del alambre.
+  \item Brújula o imán de referencia con la cara N marcada.
+  \item Calibrador (pie de rey) y galgas o láminas de \ValEntrehierro\ mm para fijar el entrehierro.
+  \item Impresora 3D (o taladro con broca de 8 mm y sierra de copa si usa acrílico o MDF).
+  \item Opcional: osciloscopio y tacómetro óptico.
+\end{itemize}
+
+%=====================================================================
+\section{Fase 0 · Impresión de las piezas}
+%=====================================================================
+Las piezas se generan con
+\begin{lstlisting}[style=consola]
+uv run generador-axial cad
+\end{lstlisting}
+y quedan en \archivo{cad_3d/stl/} (unidades en milímetros). Todas son sólidos cerrados (\emph{watertight}),
+verificados por las pruebas automáticas, de modo que cualquier \emph{slicer} las acepta sin reparación.
+
+\begin{table}[H]
+\centering
+\caption{Piezas imprimibles. Los agujeros incluyen una holgura de 0.2 mm por lado para un ajuste deslizante.}
+\small
+\begin{tabularx}{\textwidth}{llX}
+\toprule
+Archivo & Pieza & Cotas\\
+\midrule
+\archivo{carrete_base.stl} & Base del carrete & Núcleo $\varnothing$\ValDiametroInteriorBobina\ × \ValAlturaBobina\ mm, ala $\varnothing$32 × 2 mm, agujero $\varnothing$8.4 mm\\
+\archivo{carrete_tapa.stl} & Tapa del carrete & Ala desmontable $\varnothing$32 × 2 mm, agujero $\varnothing$8.4 mm\\
+\archivo{disco_rotor_8_polos.stl} & Rotor & $\varnothing$110 × 6 mm, 8 alojamientos $\varnothing$20.4 × 4 mm a radio \ValRadioMontaje\ mm, eje $\varnothing$8.4 mm\\
+\archivo{disco_estator_soporte.stl} & Estator & $\varnothing$120 × 5 mm, 8 alojamientos $\varnothing$28.4 × 3 mm a radio \ValRadioMontaje\ mm, centro $\varnothing$22.4 mm\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\begin{paso}{Paso 0.1 · Configurar el \emph{slicer}}
+PLA o PETG, altura de capa 0.2 mm, 4 perímetros, 40\,\% de relleno, \textbf{sin soportes}: todas las piezas
+tienen una cara plana completa que va contra la cama. Imprima los alojamientos hacia arriba.
+\end{paso}
+
+\begin{paso}{Paso 0.2 · Verificar las cotas}
+Mida con el calibrador el diámetro de un alojamiento de imán (debe ser 20.3–20.5 mm) y pruebe un imán: debe
+entrar con una leve presión del dedo. Si queda flojo, el epoxi compensará; si no entra, lije el alojamiento
+o reimprima con compensación de agujeros (\emph{hole horizontal expansion}) de $+0.1$ mm.
+\end{paso}
+
+%=====================================================================
+\section{Fase 1 · Bobinas y estator}
+%=====================================================================
+
+\begin{paso}{Paso 1.1 · Montar el carrete}
+Atornille \archivo{carrete_base} y \archivo{carrete_tapa} con un perno M8 y su tuerca. Cubra el núcleo con una
+vuelta de cinta de teflón o papel encerado: así la bobina no se adhiere y se puede extraer.
+\end{paso}
+
+\begin{paso}{Paso 1.2 · Bobinar \ValEspiras\ espiras}
+Deje 6 cm de alambre libre (inicio, \textbf{I}). Enrolle \textbf{\ValEspiras\ espiras} ordenadas y apretadas,
+siempre en el mismo sentido. Puede sujetar el perno en un taladro a baja velocidad y contar vueltas, o usar
+un contador mecánico. Deje 6 cm al final (\textbf{F}).
+
+La ventana del carrete mide $\frac{\ValDiametroExteriorBobina-\ValDiametroInteriorBobina}{2}\times\ValAlturaBobina
+=\ValVentanaBobinaMM$ mm$^2$; con alambre esmaltado de $\varnothing$\ValDiametroEsmaltado\ mm, \ValEspiras\
+espiras ocupan el \ValOcupacion\ de la ventana (máximo práctico $\approx 230$ espiras).
+\end{paso}
+
+\begin{paso}{Paso 1.3 · Fijar, extraer y marcar}
+Impregne la bobina con unas gotas de cianoacrilato o barniz dieléctrico y espere a que seque. Retire la tapa y
+extraiga la bobina. Marque con cinta los extremos \textbf{I} y \textbf{F}. Repita hasta tener 8 bobinas
+idénticas.
+\end{paso}
+
+\begin{paso}{Paso 1.4 · Medir cada bobina}
+Raspe 1.5 cm de esmalte en ambos extremos (lija o cúter, hasta ver cobre brillante) y mida la resistencia. Cada
+bobina tiene $\ValLongitudAlambreBobina$ m de alambre, por lo que debe medir
+\[
+R_{bobina}=\frac{\rho\,\ell}{A_{Cu}}=\frac{1.72\times10^{-8}\times\ValLongitudAlambreBobina}{\ValAreaCobreMM\times10^{-6}}
+\approx \ValResistenciaBobina\ \Omega .
+\]
+Una bobina con resistencia mucho menor tiene espiras en cortocircuito (esmalte dañado); una con resistencia
+infinita está cortada. Descártela y rehágala.
+\end{paso}
+
+\begin{paso}{Paso 1.5 · Pegar las bobinas en el estator}
+Pegue cada bobina con epoxi en su alojamiento, \textbf{todas con la misma cara hacia arriba} (por ejemplo, la
+cara en la que empezó a bobinar). Así todas quedan enrolladas en el mismo sentido y la alternancia de polaridad
+se resuelve solo con el orden de conexión del paso siguiente. Numere las bobinas de 1 a 8 en sentido horario.
+\end{paso}
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[scale=0.85]
+  % Rotor
+  \begin{scope}
+    \fill[Gris!15] (0,0) circle (2.75);
+    \draw[Gris,thick] (0,0) circle (2.75);
+    \fill[white] (0,0) circle (0.2);
+    \foreach \i in {0,...,7} {
+      \pgfmathsetmacro{\ang}{90-45*\i}
+      \ifodd\i \def\col{Azul!70}\def\pol{S}\else \def\col{Rojo!80}\def\pol{N}\fi
+      \fill[\col] (\ang:2.0) circle (0.5);
+      \node[white,font=\bfseries] at (\ang:2.0) {\pol};
+    }
+    \node[below=0.2cm,font=\small] at (0,-2.75) {Rotor (cara hacia el estator)};
+  \end{scope}
+  % Estator
+  \begin{scope}[xshift=7.5cm]
+    \fill[Gris!8] (0,0) circle (3.0);
+    \draw[Gris,thick] (0,0) circle (3.0);
+    \draw[Gris] (0,0) circle (0.55);
+    \foreach \i in {1,...,8} {
+      \pgfmathsetmacro{\ang}{90-45*(\i-1)}
+      \fill[Naranja!60] (\ang:2.0) circle (0.7);
+      \fill[Gris!8] (\ang:2.0) circle (0.3);
+      \node[font=\scriptsize\bfseries] at (\ang:2.0) {\i};
+    }
+    \node[below=0.2cm,font=\small] at (0,-3.0) {Estator (bobinas numeradas)};
+  \end{scope}
+\end{tikzpicture}
+\caption{Disposición enfrentada: la bobina $k$ queda frente al imán $k$. Cuando la bobina impar ve un polo N, la
+par ve un polo S; por eso sus fem tienen signos opuestos.}
+\end{figure}
+
+\begin{paso}{Paso 1.6 · Conexión en serie con polaridad alternada}
+Una las bobinas así (``F2'' significa el extremo final de la bobina 2):
+\[
+\text{F1}\!-\!\text{F2},\quad \text{I2}\!-\!\text{I3},\quad \text{F3}\!-\!\text{F4},\quad \text{I4}\!-\!\text{I5},\quad
+\text{F5}\!-\!\text{F6},\quad \text{I6}\!-\!\text{I7},\quad \text{F7}\!-\!\text{F8}.
+\]
+Quedan libres \textbf{I1} e \textbf{I8}: son los terminales de salida de corriente alterna. Suelde cada unión y
+aíslela con termorretráctil.
+\end{paso}
+
+\begin{figure}[H]
+\centering
+\begin{circuitikz}[scale=0.95,transform shape]
+  \draw (0,0) node[ocirc,label=above:I1]{}
+    to[L,l=$B_1$] (1.9,0)
+    to[L,l=$B_2$] (3.8,0)
+    to[L,l=$B_3$] (5.7,0)
+    to[L,l=$B_4$] (7.6,0)
+    to[L,l=$B_5$] (9.5,0)
+    to[L,l=$B_6$] (11.4,0)
+    to[L,l=$B_7$] (13.3,0)
+    to[L,l=$B_8$] (15.2,0) node[ocirc,label=above:I8]{};
+  \foreach \x/\a/\b in {1.9/F1/F2,3.8/I2/I3,5.7/F3/F4,7.6/I4/I5,9.5/F5/F6,11.4/I6/I7,13.3/F7/F8}
+    \node[below,font=\scriptsize,Gris] at (\x,-0.15) {\a--\b};
+  \foreach \x/\s in {0.95/{I$\to$F},2.85/{F$\to$I},4.75/{I$\to$F},6.65/{F$\to$I},8.55/{I$\to$F},10.45/{F$\to$I},12.35/{I$\to$F},14.25/{F$\to$I}}
+    \node[font=\scriptsize,Cian] at (\x,-0.95) {\s};
+\end{circuitikz}
+\caption{Cadena serie. Bajo cada bobina se indica en qué sentido la recorre la corriente: las bobinas pares se
+recorren al revés, lo que invierte el signo de su fem y compensa que vean el polo opuesto.}
+\end{figure}
+
+\begin{nota}[Por qué se alterna]
+En un instante dado la fem de la bobina $k$ es $\mathcal{E}_k=(-1)^{k+1}\,N\omega_e\Phi_{max}\sin(\omega_e t)$, porque
+bobinas vecinas están frente a polos opuestos. Si se conectaran todas I$\to$F, la suma sería
+$\sum_k\mathcal{E}_k=0$. Recorriendo las pares al revés, cada término cambia de signo y todas se suman:
+$\mathcal{E}=8N\omega_e\Phi_{max}\sin(\omega_e t)$.
+\end{nota}
+
+\begin{paso}{Paso 1.7 · Verificar resistencia y polaridad}
+\begin{enumerate}
+  \item Mida la resistencia entre I1 e I8: debe ser $\approx\ValResistenciaInterna\ \Omega$ ($8\times\ValResistenciaBobina$).
+  \item Prueba de polaridad: conecte el multímetro en DC (escala 200 mV) entre I1 e I8. Acerque rápidamente la
+        cara N de un imán a la bobina 1 y anote el signo de la desviación. Repita con la cara S sobre la bobina 2:
+        el signo debe ser \textbf{el mismo}. Continúe alternando N/S sobre todas las bobinas. Si alguna da signo
+        contrario, sus extremos están invertidos.
+\end{enumerate}
+\end{paso}
+
+%=====================================================================
+\section{Fase 2 · Rotor magnético}
+%=====================================================================
+\begin{paso}{Paso 2.1 · Identificar las polaridades}
+Acerque cada imán a la brújula: la cara que atrae el extremo sur de la aguja es la cara \textbf{N}. Marque con
+rotulador 4 imanes con la cara N hacia arriba y 4 con la cara S hacia arriba. Guárdelos separados con
+espaciadores de cartón de al menos 1 cm.
+\end{paso}
+
+\begin{paso}{Paso 2.2 · Insertar los imanes}
+Inserte los imanes en el disco rotor en secuencia \textbf{N-S-N-S-N-S-N-S}, de uno en uno, sujetando el disco con
+la otra mano lejos de los demás imanes. El alojamiento tiene 4 mm de profundidad y el imán \ValEspesorIman\ mm de
+espesor: cada imán sobresale 1 mm. Compruebe la alternancia: un imán suelto colocado sobre posiciones vecinas
+debe ser atraído y repelido alternadamente.
+\end{paso}
+
+\begin{paso}{Paso 2.3 · Fijar con epoxi}
+Aplique epoxi en el fondo y alrededor de cada imán. Deje curar \textbf{12 a 24 h} con el disco horizontal y sin
+imanes cerca (que podrían arrastrar los del rotor mientras el epoxi está blando).
+\end{paso}
+
+%=====================================================================
+\section{Fase 3 · Ensamble mecánico y entrehierro}
+%=====================================================================
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[x=0.09cm,y=0.09cm]
+  % Eje
+  \fill[Gris!40] (-45,-4) rectangle (50,4);
+  \node[font=\scriptsize] at (-38,0) {eje $\varnothing$8};
+  % Soportes con rodamientos
+  \foreach \xs in {-28,32} {
+    \fill[Gris!70] (\xs-3.5,-11) rectangle (\xs+3.5,-4);
+    \fill[Gris!70] (\xs-3.5,4) rectangle (\xs+3.5,11);
+    \fill[brown!40] (\xs-6,-70) rectangle (\xs+6,-11);
+    \draw (\xs-6,-70) rectangle (\xs+6,-11);
+  }
+  \node[font=\scriptsize,align=center] at (-28,-76) {soporte +\\rodamiento 608};
+  \node[font=\scriptsize,align=center] at (32,-76) {soporte +\\rodamiento 608};
+  % Rotor
+  \fill[Gris!25] (-6,4) rectangle (0,55);
+  \fill[Gris!25] (-6,-55) rectangle (0,-4);
+  \draw (-6,4) rectangle (0,55) (-6,-55) rectangle (0,-4);
+  \fill[Rojo!80] (-4,30) rectangle (1,50);
+  \fill[Azul!70] (-4,-50) rectangle (1,-30);
+  \node[font=\scriptsize,anchor=east] at (-7,52) {rotor};
+  % Tuercas del rotor
+  \fill[Gris] (-10,-6) rectangle (-6,6);
+  \fill[Gris] (0,-6) rectangle (4,6);
+  % Estator con bobinas
+  \fill[Gris!12] (6.5,11.2) rectangle (11.5,60);
+  \fill[Gris!12] (6.5,-60) rectangle (11.5,-11.2);
+  \draw (6.5,11.2) rectangle (11.5,60) (6.5,-60) rectangle (11.5,-11.2);
+  \fill[Naranja!60] (3.5,26) rectangle (9.5,54);
+  \fill[Naranja!60] (3.5,-54) rectangle (9.5,-26);
+  \fill[Gris!12] (3.5,34) rectangle (9.5,46);
+  \fill[Gris!12] (3.5,-46) rectangle (9.5,-34);
+  \node[font=\scriptsize,anchor=west] at (12.5,57) {estator};
+  % Fijación del estator
+  \draw[thick,Gris] (11.5,58) -- (32,58) -- (32,11);
+  % Entrehierro
+  \draw[{Stealth[length=1.5mm]}-{Stealth[length=1.5mm]},Rojo] (1,62) -- (3.5,62);
+  \draw[densely dotted,Rojo] (1,50) -- (1,63) (3.5,54) -- (3.5,63);
+  \node[Rojo,font=\scriptsize,anchor=south] at (2.25,63) {$g=\ValEntrehierro$ mm};
+  \node[font=\scriptsize,anchor=east] at (-5,40) {imán};
+  \node[font=\scriptsize,anchor=west] at (12.5,40) {bobina};
+\end{tikzpicture}
+\caption{Corte del ensamble (no a escala en el sentido axial del entrehierro). El rotor gira con el eje; el
+estator se fija a un soporte y no toca el eje (agujero central de 22.4 mm).}
+\end{figure}
+
+\begin{paso}{Paso 3.1 · Soportes y eje}
+Monte los dos rodamientos 608 en soportes rígidos (torres en ``U'' de madera, aluminio o impresas). Pase el eje
+de 8 mm y fije el rotor con una tuerca y una arandela a cada lado. Gire a mano y observe el borde del disco:
+no debe cabecear más de 0.3 mm (compruébelo con una galga fija junto al borde).
+\end{paso}
+
+\begin{paso}{Paso 3.2 · Montar el estator}
+Fije el estator al soporte, con las bobinas mirando hacia los imanes y sin tocar el eje. Alinee los centros:
+la bobina 1 y el imán 1 deben poder quedar enfrentados exactamente.
+\end{paso}
+
+\begin{paso}{Paso 3.3 · Ajustar el entrehierro}
+Inserte una galga de \ValEntrehierro\ mm entre la cara de un imán y la cara de la bobina enfrentada y acerque
+el estator hasta que la galga quede apenas pinzada. Repita en tres posiciones a 120$^\circ$ para que el estator
+quede paralelo. Retire las galgas y apriete.
+
+\emph{Por qué importa}: el campo cae rápidamente con la distancia,
+\[
+B_z(z)=\frac{B_r}{2}\left[\frac{z+L}{\sqrt{(z+L)^2+R^2}}-\frac{z}{\sqrt{z^2+R^2}}\right],
+\]
+de modo que con $g=\ValEntrehierro$ mm el campo en la cara de la bobina es \ValCampoCaraBobina\ T, y con
+$g=5$ mm baja a 0.162 T: duplicar el entrehierro reduce el campo en la cara de la bobina un 27\,\%, y la
+tensión cae en una proporción parecida.
+\end{paso}
+
+\begin{paso}{Paso 3.4 · Prueba de giro}
+Gire a mano. El rotor debe girar suave, \textbf{sin tirones} (cero \emph{cogging}) y sin rozar el estator en
+ningún punto. Si roza, revise el paralelismo (paso 3.3) o el cabeceo (paso 3.1).
+\end{paso}
+
+%=====================================================================
+\section{Fase 4 · Rectificación y salida}
+%=====================================================================
+\begin{figure}[H]
+\centering
+\begin{circuitikz}[scale=0.88,transform shape]
+  \coordinate (A) at (0,0);
+  \coordinate (T) at (2,1.6);
+  \coordinate (B) at (2,-1.6);
+  \coordinate (C) at (4,0);
+  \draw (A) to[D*,l=$D_1$] (T);
+  \draw (C) to[D*,l_=$D_2$] (T);
+  \draw (B) to[D*,l=$D_3$] (A);
+  \draw (B) to[D*,l_=$D_4$] (C);
+  % Generador
+  \draw (A) -- (-1.8,0) to[sV,l_={Generador}] (-1.8,-3.6) -- (5,-3.6) -- (5,-2.85);
+  \draw (5,-2.5) node[jump crossing,scale=1.6](X){};
+  \draw (C) -- (5,0) -- (X.north);
+  \draw (X.south) -- (5,-2.85);
+  \node[left,font=\small] at (-0.1,0.25) {I1};
+  \node[above,font=\small] at (4.5,0) {I8};
+  % Rieles
+  \draw (T) -- (2,2.6) -- (12,2.6);
+  \draw (B) -- (2,-2.5) -- (X.west);
+  \draw (X.east) -- (12,-2.5);
+  % Filtro e indicador
+  \draw (7,2.6) to[eC,l={\ValCapacitanciaMicro\,$\mu$F / \ValTensionNominalCondensador\,V}] (7,-2.5);
+  \draw (10,2.6) to[R,l={\ValResistenciaLed\,$\Omega$}] (10,0) to[leD*,l={LED}] (10,-2.5);
+  \draw (12,2.6) to[short,-o] (12.6,2.6) node[right]{$+V_{DC}$};
+  \draw (12,-2.5) to[short,-o] (12.6,-2.5) node[right]{GND};
+  \fill (7,2.6) circle (2pt) (10,2.6) circle (2pt) (7,-2.5) circle (2pt) (10,-2.5) circle (2pt);
+\end{circuitikz}
+\caption{Puente rectificador de onda completa con filtro capacitivo e indicador LED. El cable del generador cruza
+el riel negativo sin conectarse (salto).}
+\end{figure}
+
+\begin{paso}{Paso 4.1 · Puente rectificador}
+Lista de conexiones (el cátodo es el extremo con la franja):
+\begin{itemize}
+  \item $D_1$: ánodo en I1, cátodo en (+). \quad $D_2$: ánodo en I8, cátodo en (+).
+  \item $D_3$: ánodo en (−), cátodo en I1. \quad $D_4$: ánodo en (−), cátodo en I8.
+\end{itemize}
+En el semiciclo en que I1 es positivo conducen $D_1$ y $D_4$; en el otro, $D_2$ y $D_3$. Siempre hay
+\textbf{dos diodos en serie}, por eso la caída total es $2V_D=\ValCaidaPuente$ V con Schottky 1N5819
+(1.4 V con 1N4007).
+\end{paso}
+
+\begin{paso}{Paso 4.2 · Condensador de filtro}
+Conecte el condensador de \ValCapacitanciaMicro\ $\mu$F entre (+) y (−) respetando su polaridad (la franja del
+encapsulado marca el terminal negativo). Su función es sostener la tensión entre picos: con la carga del LED a
+\ValRpmReferencia\ RPM el rizado es de unos \ValRizadoRef\ mV (Documento~2).
+\end{paso}
+
+\begin{paso}{Paso 4.3 · Indicador LED}
+Conecte la resistencia de \ValResistenciaLed\ $\Omega$ en serie con el LED (ánodo hacia la resistencia, cátodo
+hacia (−)). La corriente es $I_{LED}=(V_{DC}-\ValCaidaLed)/\ValResistenciaLed$: unos \ValCorrienteLedRefMili\ mA a
+\ValRpmReferencia\ RPM (brillo tenue) y \ValCorrienteLedMaxMili\ mA a \ValRpmMaxima\ RPM.
+\end{paso}
+
+\begin{paso}{Paso 4.4 · Bornes de medida}
+Deje dos bornes en la salida AC (I1, I8) y dos en la salida DC (+, −) para poder medir sin desoldar.
+\end{paso}
+
+%=====================================================================
+\section{Fase 5 · Micro-red: batería, controlador e inversor}
+%=====================================================================
+\begin{advertencia}[Tensión peligrosa]
+La salida del inversor (\ValInversorTension\ V o \ValInversorTensionAlta\ V, pico de \ValInversorPicoAlto\ V) puede
+ser mortal. Haga todas las conexiones con el inversor apagado, use una caja aislada para el tomacorriente, no
+toque bornes descubiertos y mida sólo con puntas de categoría CAT~II o superior. Una batería en cortocircuito
+entrega cientos de amperios: coloque el fusible pegado al borne positivo antes de conectar nada más.
+\end{advertencia}
+
+\begin{paso}{Paso 5.1 · Ajustar el controlador de carga}
+\begin{enumerate}
+  \item Alimente la entrada con una fuente de 12 V, sin batería en la salida.
+  \item Ajuste la tensión de salida (potenciómetro CV) a \ValControladorAbsorcion\ V.
+  \item Ponga el amperímetro en cortocircuito en la salida y ajuste el límite de corriente (CC) a
+        \ValControladorCorrienteMax\ A como máximo.
+  \item Si el módulo no tiene diodo antirretorno, coloque un 1N5822 en serie con la salida (+).
+\end{enumerate}
+\textbf{Por qué}: el generador tiene $R_{int}=\ValResistenciaInterna\ \Omega$. Un elevador de tensión fija sin límite
+de corriente pide más de lo que el generador puede dar, su entrada colapsa y deja de cargar. El modelo supone
+que el controlador trabaja cerca del punto de máxima potencia (Documento~1).
+\end{paso}
+
+\begin{paso}{Paso 5.2 · Conectar la batería}
+\begin{enumerate}
+  \item Negativo de la batería al negativo común (salida (−) del puente y del controlador).
+  \item Fusible de 10 A en el borne positivo y, después del fusible, la salida (+) del controlador.
+  \item Compruebe la tensión en reposo: entre \ValBateriaVacia\ V (vacía) y \ValBateriaLlena\ V (llena).
+        Al \ValSocInicial\,\% debe leer unos \ValTensionOcRef\ V.
+\end{enumerate}
+\end{paso}
+
+\begin{paso}{Paso 5.3 · Conectar el inversor y la carga}
+\begin{enumerate}
+  \item Con el inversor en OFF, conecte su entrada a la batería después del fusible, rojo al (+) y negro al (−).
+        Es normal una pequeña chispa al cargarse sus condensadores.
+  \item En la salida conecte el tomacorriente con un fusible de 1 A en la fase y el bombillo de
+        \ValPotenciaCargaAc\ W.
+  \item Configure el corte por baja tensión del inversor, si lo permite, cerca de 12.0 V (\ValSocCorte\,\% de carga).
+\end{enumerate}
+\end{paso}
+
+%=====================================================================
+\section{Fase 6 · Protocolo de pruebas}
+%=====================================================================
+\subsection{Cómo medir la velocidad}
+Con tacómetro óptico, con la cámara lenta de un teléfono o, más simple, midiendo la frecuencia de la salida AC
+con el multímetro: como $f_e=P\cdot\text{RPM}/120$ con $P=\ValPolos$,
+\[
+\text{RPM}=\frac{120\,f_e}{P}=15\,f_e .
+\]
+
+\subsection{Tabla de ensayos}
+Los valores teóricos los calcula el modelo (\texttt{uv run generador-axial reporte}) con puente Schottky y sin
+carga. Complete las columnas medidas.
+\begin{table}[H]
+\centering
+\caption{Ensayos en vacío. Métodos de giro: 1) a mano lento, 2) a mano rápido, 3) taladro baja, 4) taladro media.}
+\small
+\begin{tabular}{ccccccccc}
+\toprule
+Ensayo & RPM & $f_e$ [Hz] & $V_{pico}$ [V] & $V_{RMS}$ [V] & $V_{DC}$ [V] & $V_{RMS}$ med. & $V_{DC}$ med. & LED\\
+\midrule
+\filasdesde{generado/tabla_ensayos.tex}
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{paso}{Paso 6.1 · Ensayo en vacío}
+Retire el LED (o desconecte su resistencia) para medir en vacío. Para cada velocidad mida $V_{RMS}$ entre I1 e
+I8 (multímetro en AC) y $V_{DC}$ entre (+) y (−). Anote también la frecuencia si su multímetro la mide.
+\end{paso}
+
+\begin{paso}{Paso 6.2 · Comprobar la linealidad}
+Grafique $V_{RMS}$ medido frente a RPM. Debe ser una recta que pasa por el origen (es la firma de un generador sin
+núcleo). Una curva que se aplana indica deslizamiento del acople del taladro o medición fuera de rango del
+multímetro.
+\end{paso}
+
+\begin{paso}{Paso 6.3 · Ensayo con carga resistiva (opcional)}
+Conecte una resistencia de potencia de unos 12 $\Omega$ ($\approx R_{int}$) a la salida AC. A \ValRpmCarga\ RPM el
+modelo predice $V_{carga}=\ValTensionEnCarga$ V e $I=\ValCorrienteCarga$ A (valores RMS), es decir,
+$P_L=\ValPotenciaCarga$ W. Notará que el rotor se frena: es el par de Lenz,
+$\tau=\ValParResistenteMili$ mN$\cdot$m.
+\end{paso}
+
+\begin{paso}{Paso 6.4 · Ensayo de carga de la batería}
+Amperímetro DC (escala 10 A) en serie entre el controlador y la batería. Con la batería cerca del
+\ValSocInicial\,\%, el modelo predice:
+\begin{center}
+\begin{tabular}{cccc}
+\toprule
+RPM & Potencia a la batería [W] & $I_{carga}$ teórica [mA] & $I_{carga}$ medida\\
+\midrule
+400 & 0.92 & 75 & \\
+\ValRpmMicrored & \ValPotenciaHaciaBateria & \ValCorrienteCargaMicroredMili & \\
+800 & 3.68 & 299 & \\
+1000 & 5.74 & 467 & \\
+\bottomrule
+\end{tabular}
+\end{center}
+Al detener el generador la corriente debe caer a cero sin invertirse (diodo antirretorno).
+\end{paso}
+
+\begin{paso}{Paso 6.5 · Ensayo del inversor}
+\begin{enumerate}
+  \item Generador parado, inversor en ON. En el tomacorriente (escala 600 V AC) debe medir
+        \ValInversorTension–120 V (o \ValInversorTensionAlta–230 V) a \ValInversorFrecuencia\ Hz.
+  \item Con el bombillo de \ValPotenciaCargaAc\ W encendido, la batería entrega unos
+        \ValCorrienteInversorBateria\ A (\ValPotenciaEntradaInversor\ W).
+  \item Haga girar el generador a \ValRpmMicrored\ RPM: la descarga neta baja a unos
+        \ValPotenciaNetaBateria\ W, pero \textbf{no se invierte}. Con \ValPotenciaCargaAc\ W el equilibrio exigiría
+        \ValRpmEquilibrio\ RPM; con un bombillo de \ValPotenciaCargaReducida\ W basta con
+        $\approx$\ValRpmEquilibrioReducida\ RPM.
+  \item Autonomía esperada desde el \ValSocInicial\,\% hasta el corte: \ValAutonomiaHoras\ h a
+        \ValRpmMicrored\ RPM y \ValAutonomiaParadoHoras\ h con el generador parado.
+\end{enumerate}
+\end{paso}
+
+\subsection{Análisis de discrepancias}
+\begin{enumerate}
+  \item \textbf{Diodos}: $V_{DC}=V_{pico}-2V_D$. Con 1N4007 la salida será 0.8 V menor que la de la tabla.
+  \item \textbf{Resistencia interna}: con carga, $V_{carga}=\mathcal{E}\,R_L/(R_{int}+R_L)$; un multímetro no
+        carga el circuito, pero el LED sí lo hace levemente.
+  \item \textbf{Factor de acoplamiento}: si todas las tensiones son menores en la misma proporción, estime el
+        valor real como $k_{real}=\ValAcoplamiento\cdot V_{medido}/V_{te\acute{o}rico}$ y actualícelo en
+        \archivo{configuracion.py}.
+  \item \textbf{Entrehierro}: un entrehierro mayor que el de diseño reduce la tensión (paso 3.3).
+  \item \textbf{Temperatura}: la resistencia del cobre aumenta un 0.39\,\% por grado Celsius.
+  \item \textbf{Controlador real}: si la corriente de carga es mucho menor que la de la tabla, el controlador no
+        trabaja en el punto de máxima potencia; con $\eta_c$ real $=P_{bat,medida}/P_{max}$ se puede recalibrar.
+\end{enumerate}
+
+\subsection{Diagnóstico de fallas}
+\begin{table}[H]
+\centering
+\small
+\begin{tabularx}{\textwidth}{XX}
+\toprule
+Síntoma & Causa probable y solución\\
+\midrule
+Tensión casi nula & Bobinas conectadas sin alternar (se cancelan): repita la prueba de polaridad del paso 1.7.\\
+Tensión un 25\,\% menor que la esperada & Una bobina invertida: aporta $-1$ en vez de $+1$ y la suma queda en $6/8$ del valor.\\
+Resistencia I1–I8 infinita & Unión mal soldada o esmalte sin raspar.\\
+Resistencia I1–I8 muy baja & Espiras en cortocircuito; mida bobina por bobina.\\
+AC correcta pero DC nula & Diodo invertido o abierto en el puente; revise la lista del paso 4.1.\\
+El rotor roza o vibra & Cabeceo del eje o estator no paralelo (pasos 3.1 y 3.3).\\
+El LED no enciende a baja velocidad & Normal: necesita $V_{DC}>\ValCaidaLed$ V, es decir, más de unas 100 RPM.\\
+La batería no carga & $V_{DC}<\ValControladorArranque$ V (gire más rápido), fusible abierto o controlador sin límite de corriente que colapsa la entrada.\\
+El inversor se apaga solo & Corte por baja tensión: la batería llegó al \ValSocCorte\,\%. Recárguela hasta el \ValSocReconexion\,\% o más.\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\end{document}

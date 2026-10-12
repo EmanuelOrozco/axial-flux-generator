@@ -1,0 +1,491 @@
+\documentclass[11pt]{article}
+\newcommand{\nombredocumento}{04 · Arquitectura del software}
+\input{comun/preambulo.tex}
+
+\begin{document}
+
+\portada{Arquitectura del software}
+        {Organización del código, patrones de diseño, pruebas y guía de uso del modelo, el CAD y el visualizador}
+        {Documento 4 de 5 · Ingeniería de software del proyecto}
+
+\tableofcontents
+\newpage
+
+%=====================================================================
+\section{Objetivo y alcance}
+%=====================================================================
+El proyecto tiene tres productos de software que describen el mismo generador:
+\begin{enumerate}
+  \item \textbf{Modelo analítico} (Python): calcula campo, flujo, tensión, potencia y par, y genera las gráficas.
+  \item \textbf{Generador CAD} (Python): produce las piezas imprimibles en STL a partir de las mismas cotas.
+  \item \textbf{Visualizador 3D} (JavaScript + Three.js): animación interactiva con osciloscopio y métricas.
+\end{enumerate}
+A estos se suma la \textbf{documentación} (estos PDF), cuyos números se generan desde el modelo.
+
+El problema central que resuelve la arquitectura es la \textbf{coherencia}: antes, cada producto tenía sus
+propias constantes y fórmulas, y divergían (por ejemplo, el CAD, la simulación y la guía no coincidían en las
+cotas ni en los resultados). Ahora existe \textbf{una sola definición del diseño} y todo se deriva de ella.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+  caja/.style={draw=#1,fill=#1!8,rounded corners,minimum width=3.2cm,minimum height=1cm,align=center,font=\small},
+  flecha/.style={-{Stealth[length=2.5mm]},thick,Gris}]
+  \node[caja=Azul,minimum width=4.2cm] (cfg) {\texttt{configuracion.py}\\ \footnotesize diseño único};
+  \node[caja=Cian,below left=1.1cm and 1.5cm of cfg] (sim) {Simulador\\ \footnotesize gráficas PNG};
+  \node[caja=Cian,below=1.1cm of cfg] (cad) {Catálogo de piezas\\ \footnotesize STL};
+  \node[caja=Cian,below right=1.1cm and 1.5cm of cfg] (rep) {Reporte\\ \footnotesize macros \LaTeX};
+  \node[caja=Naranja,right=2.8cm of cfg] (js) {\texttt{js/config.js}\\ \footnotesize visualizador};
+  \node[caja=Verde,below=1.0cm of rep] (pdf) {PDF en \texttt{docs/}};
+  \draw[flecha] (cfg) -- (sim);
+  \draw[flecha] (cfg) -- (cad);
+  \draw[flecha] (cfg) -- (rep);
+  \draw[flecha] (rep) -- (pdf);
+  \draw[flecha] (sim.south) |- (pdf.west);
+  \draw[{Stealth[length=2.5mm]}-{Stealth[length=2.5mm]},thick,dashed,Rojo] (cfg) -- node[above,font=\scriptsize]{prueba de paridad} (js);
+\end{tikzpicture}
+\caption{Fuente única de verdad. El visualizador no puede importar Python, así que replica la configuración en
+JavaScript y una prueba automática garantiza que ambas sean idénticas.}
+\end{figure}
+
+%=====================================================================
+\section{Estructura de directorios}
+%=====================================================================
+\begin{lstlisting}[style=consola]
+teoria_electromagnetica/
+|-- pyproject.toml              # proyecto uv: dependencias, comando y pytest
+|-- src/generador_axial/
+|   |-- configuracion.py        # diseño por defecto y escenario de análisis
+|   |-- rutas.py                # directorios de salida
+|   |-- dominio/                # entidades y leyes físicas (sin E/S)
+|   |   |-- errores.py  componentes.py  mecanica.py  diseno.py  fisica.py
+|   |-- aplicacion/             # casos de uso
+|   |   |-- simulador.py  piezas.py  reporte.py
+|   |-- infraestructura/        # adaptadores a formatos externos
+|   |   |-- cad/  (malla.py  constructor.py  exportador.py)
+|   |   |-- graficas/  (base.py  catalogo.py)
+|   |   |-- latex.py
+|   |-- presentacion/           # interfaz de línea de comandos
+|       |-- cli.py  consola.py
+|-- tests/                      # pruebas pytest (138 casos, 29 de interfaz)
+|-- simulacion/modelo_analitico.py   # envoltorio: generador-axial simular
+|-- simulacion/graficas/        # PNG generados
+|-- cad_3d/generar_modelos_stl.py    # envoltorio: generador-axial cad
+|-- cad_3d/stl/                 # STL generados
+|-- visualizador_3d/
+|   |-- index.html  server.py  css/style.css
+|   |-- js/config.js  js/app.js
+|   |-- js/modelo/  (fisica.js  dinamica.js  estado.js)
+|   |-- js/vista/   (escena.js  materiales.js  osciloscopio.js  panel.js)
+|   |-- js/controlador/controles.js
+|   |-- js/vendor/  (three.min.js  OrbitControls.js)
+|-- docs/
+    |-- *.md  *.pdf  compilar_pdf.sh
+    |-- latex/  (fuentes .tex, comun/preambulo.tex, generado/)
+\end{lstlisting}
+
+%=====================================================================
+\section{Arquitectura en capas (Python)}
+%=====================================================================
+El paquete \archivo{generador_axial} sigue una \textbf{arquitectura limpia}: las dependencias apuntan siempre
+hacia el dominio. El dominio no sabe que existen matplotlib, STL ni \LaTeX; por eso se puede probar de forma
+aislada y reutilizar en cualquier interfaz.
+
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+  capa/.style={draw=#1,fill=#1!10,minimum width=11cm,minimum height=1.05cm,align=center,font=\small},
+  flecha/.style={-{Stealth[length=2.5mm]},thick,Gris}]
+  \node[capa=Naranja] (p) {\textbf{Presentación} · \texttt{cli.py}, \texttt{consola.py}\\ \footnotesize comandos de terminal, formato de salida};
+  \node[capa=Cian,below=0.45cm of p] (i) {\textbf{Infraestructura} · \texttt{cad/}, \texttt{graficas/}, \texttt{latex.py}\\ \footnotesize STL binario, PNG con matplotlib, macros \LaTeX};
+  \node[capa=Azul,below=0.45cm of i] (a) {\textbf{Aplicación} · \texttt{simulador.py}, \texttt{piezas.py}, \texttt{reporte.py}\\ \footnotesize casos de uso: operar el generador, describir piezas, reportar};
+  \node[capa=Verde,below=0.45cm of a] (d) {\textbf{Dominio} · \texttt{componentes.py}, \texttt{diseno.py}, \texttt{fisica.py}\\ \footnotesize entidades validadas y leyes físicas puras};
+  \draw[flecha] (p) -- (i);
+  \draw[flecha] (i) -- (a);
+  \draw[flecha] (a) -- (d);
+  \draw[flecha] (p.east) -- ++(0.6,0) |- (a.east);
+\end{tikzpicture}
+\caption{Capas y sentido de las dependencias (una capa solo importa a las de abajo).}
+\end{figure}
+
+\subsection{Dominio}
+\begin{itemize}
+  \item \archivo{componentes.py}: entidades inmutables (\texttt{@dataclass(frozen=True)}) que representan cada
+        componente físico: \texttt{ImanPermanente}, \texttt{AlambreMagneto}, \texttt{Bobina}, \texttt{Rotor},
+        \texttt{Estator}, \texttt{Rectificador}, \texttt{IndicadorLed} y, para la micro-red, \texttt{Bateria},
+        \texttt{ControladorCarga} e \texttt{InversorAc}. Cada una valida sus invariantes al
+        construirse (por ejemplo, número de polos par, imanes que no se solapan, ocupación de la ventana de la
+        bobina menor que 1) y lanza \texttt{ErrorDeDiseno} si no se cumplen.
+  \item \archivo{mecanica.py}: cotas de las piezas fabricables (\texttt{GeometriaMecanica}).
+  \item \archivo{diseno.py}: el agregado \texttt{DisenoGenerador}, que une los componentes y valida reglas que
+        involucran a varios (tantas bobinas como polos, mismo radio de montaje, piezas que caben en los discos).
+  \item \archivo{fisica.py}: funciones puras y vectorizadas con NumPy (campo axial, campo medio, frecuencia,
+        fem, rectificación, rizado, corriente en carga, potencia máxima extraíble y corriente de carga de la
+        batería). Cada función cita la ecuación del Documento~1.
+\end{itemize}
+
+\begin{lstlisting}[style=python]
+@dataclass(frozen=True)
+class Bobina:
+    espiras: int
+    diametro_interior_m: float
+    diametro_exterior_m: float
+    altura_m: float
+    alambre: AlambreMagneto
+
+    @property
+    def resistencia_ohm(self) -> float:
+        return self.alambre.resistividad_ohm_m * self.longitud_alambre_m / self.alambre.area_cobre_m2
+
+    @property
+    def factor_ocupacion(self) -> float:
+        """Fracción de la ventana ocupada si cada espira requiere un cuadrado de lado d_esmaltado."""
+        return self.espiras * self.alambre.diametro_esmaltado_m**2 / self.area_ventana_m2
+\end{lstlisting}
+
+\subsection{Aplicación}
+\begin{itemize}
+  \item \archivo{simulador.py}: \texttt{SimuladorGenerador} es una \emph{fachada} que aplica la física a un
+        diseño concreto. Ofrece los métodos \archivo{punto_de_operacion(rpm)}, \archivo{forma_de_onda(...)} y
+        \archivo{operar_con_carga(...)}, que devuelven objetos de valor inmutables
+        (\archivo{PuntoDeOperacion}, \archivo{FormaDeOnda} y \archivo{OperacionConCarga}). Los valores que no cambian
+        (campo, flujo) se calculan una vez con \texttt{cached\_property}. Para la micro-red ofrece
+        \archivo{balance_microred(rpm, potencia_carga_ac_w, soc)}, \archivo{rpm_de_equilibrio(p)},
+        \archivo{simular_bateria(...)} (integración del SoC con corte y reconexión por histéresis) y
+        \archivo{forma_de_onda_inversor(...)}, que devuelven \archivo{BalanceMicrored}, \archivo{EvolucionBateria}
+        y \archivo{SalidaInversor}.
+  \item \archivo{piezas.py}: \texttt{catalogo\_de\_piezas(diseno)} es una \emph{fábrica} que traduce el diseño a
+        especificaciones geométricas neutras (\texttt{PlacaConAlojamientos}, \texttt{SolidoDeRevolucion}), sin
+        saber nada del formato STL.
+  \item \archivo{reporte.py}: \texttt{generar\_reporte} recorre los pasos de la memoria de cálculo y produce una
+        lista de \texttt{Magnitud} (clave, valor formateado, unidad) con todos los valores intermedios.
+\end{itemize}
+
+\subsection{Infraestructura}
+\begin{itemize}
+  \item \archivo{cad/constructor.py}: convierte cada especificación geométrica en una \texttt{Malla} triangular
+        cerrada. Los sólidos de revolución se barren 360$^\circ$; las placas se triangulan con Delaunay y se
+        descartan los triángulos cuyo centroide cae dentro de un agujero.
+  \item \archivo{cad/malla.py}: \texttt{Malla} sabe unir mallas, calcular normales, su volumen con signo y si es
+        hermética (cada arista compartida exactamente por dos triángulos con orientación opuesta).
+  \item \archivo{cad/exportador.py}: escribe STL binario con un \texttt{dtype} estructurado de NumPy.
+  \item \archivo{graficas/}: una clase por gráfica sobre la base \texttt{Grafica}.
+  \item \archivo{latex.py}: escribe \archivo{valores.tex} (macros \texttt{\textbackslash Val...}) y
+        \archivo{tabla_ensayos.tex}.
+\end{itemize}
+
+\subsection{Presentación}
+\archivo{cli.py} define el comando \texttt{generador-axial} con cuatro subcomandos: \texttt{simular},
+\texttt{cad}, \texttt{reporte} y \texttt{todo}. \archivo{consola.py} da formato al resumen que se imprime.
+
+%=====================================================================
+\section{Patrones de diseño aplicados}
+%=====================================================================
+\begin{table}[H]
+\centering
+\caption{Patrones, dónde están y qué problema resuelven.}
+\small
+\begin{tabularx}{\textwidth}{lp{4.2cm}X}
+\toprule
+Patrón & Ubicación & Problema que resuelve\\
+\midrule
+Fuente única de verdad & \archivo{configuracion.py}, \archivo{js/config.js} & Simulación, CAD, documentos y visualizador usan las mismas cifras.\\
+Objeto de valor inmutable & \archivo{dominio/componentes.py} & Un diseño válido no puede volverse inválido después de construirse.\\
+Agregado & \archivo{dominio/diseno.py} & Las reglas que cruzan componentes se validan en un solo lugar.\\
+Fachada & \archivo{SimuladorGenerador} & Oculta las fórmulas tras operaciones de alto nivel.\\
+Fábrica & \archivo{catalogo_de_piezas} & Deriva las piezas del diseño; agregar una pieza no toca el exportador.\\
+Despacho por tipo (\emph{singledispatch}) & \archivo{construir_malla} & Un constructor por tipo de geometría sin cadenas de \texttt{if}.\\
+Template Method & \archivo{graficas/base.py} & Crear, dibujar y guardar es común; cada gráfica solo implementa \texttt{dibujar}.\\
+Command & \archivo{presentacion/cli.py} & Cada subcomando es un objeto; \texttt{todo} los compone.\\
+MVC & \archivo{visualizador_3d/js/} & Separa cálculo (modelo), dibujo (vista) y eventos (controlador).\\
+Observer & \archivo{js/modelo/estado.js} & Las vistas reaccionan solo a las claves del estado que cambian.\\
+Raíz de composición & \archivo{js/app.js} & Un único lugar crea y conecta todos los objetos.\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\subsection{Template Method en las gráficas}
+\begin{lstlisting}[style=python]
+class Grafica(ABC):
+    nombre_archivo: str
+
+    def exportar(self, directorio: Path) -> Path:
+        directorio.mkdir(parents=True, exist_ok=True)
+        figura = Figure(figsize=self.tamano_pulgadas, dpi=self.resolucion_dpi, layout="tight")
+        self.dibujar(figura)                  # paso variable
+        ruta = directorio / self.nombre_archivo
+        figura.savefig(ruta)
+        return ruta
+
+    @abstractmethod
+    def dibujar(self, figura: Figure) -> None: ...
+\end{lstlisting}
+Se usa \texttt{matplotlib.figure.Figure} directamente (no \texttt{pyplot}) para no depender de estado global ni de
+un entorno gráfico: las gráficas se generan igual en un servidor sin pantalla.
+
+\subsection{Command en la interfaz de línea de comandos}
+\begin{lstlisting}[style=python]
+class Comando(ABC):
+    nombre: str
+    ayuda: str
+
+    def configurar(self, parser): ...
+
+    @abstractmethod
+    def ejecutar(self, argumentos, simulador): ...
+
+def construir_comandos() -> list[Comando]:
+    basicos = [ComandoSimular(), ComandoCad(), ComandoReporte()]
+    return [*basicos, ComandoTodo(basicos)]
+\end{lstlisting}
+Agregar un subcomando consiste en escribir una clase y añadirla a la lista; \texttt{main} no cambia.
+
+\subsection{Despacho por tipo en el CAD}
+\begin{lstlisting}[style=python]
+@singledispatch
+def construir_malla(geometria, longitud_arista_mm=1.0) -> Malla:
+    raise TypeError(f"No hay constructor de malla para {type(geometria).__name__}.")
+
+@construir_malla.register
+def _(geometria: SolidoDeRevolucion, longitud_arista_mm=1.0) -> Malla: ...
+
+@construir_malla.register
+def _(geometria: PlacaConAlojamientos, longitud_arista_mm=1.0) -> Malla: ...
+\end{lstlisting}
+
+\subsection{Observer en el visualizador}
+\begin{lstlisting}[style=js]
+actualizar(cambios) {
+  const cambiadas = Object.keys(cambios).filter((clave) => this._datos[clave] !== cambios[clave]);
+  if (cambiadas.length === 0) return;
+  Object.assign(this._datos, cambios);
+  const instantanea = this.instantanea();
+  this._oyentes.forEach((oyente) => oyente(instantanea, new Set(cambiadas)));
+}
+\end{lstlisting}
+Por ejemplo, la escena solo reconstruye las líneas de campo cuando cambia \texttt{entrehierroMm}, no en cada
+cuadro.
+
+%=====================================================================
+\section{El visualizador 3D}
+%=====================================================================
+\begin{figure}[H]
+\centering
+\begin{tikzpicture}[
+  caja/.style={draw=#1,fill=#1!8,rounded corners,minimum width=3cm,minimum height=0.9cm,align=center,font=\footnotesize},
+  flecha/.style={-{Stealth[length=2mm]},thick,Gris}]
+  \node[caja=Azul] (cfg) {config.js};
+  \node[caja=Azul,below=0.6cm of cfg] (fis) {modelo/fisica.js};
+  \node[caja=Azul,below=0.6cm of fis] (din) {modelo/dinamica.js\\ SimulacionDinamica};
+  \node[caja=Naranja,right=1.6cm of fis] (app) {app.js\\ bucle de animación};
+  \node[caja=Verde,right=1.6cm of app,yshift=1.2cm] (esc) {vista/escena.js};
+  \node[caja=Verde,right=1.6cm of app] (osc) {vista/osciloscopio.js};
+  \node[caja=Verde,right=1.6cm of app,yshift=-1.2cm] (pan) {vista/panel.js};
+  \node[caja=Cian,above=0.9cm of app] (est) {modelo/estado.js\\ (Observer)};
+  \node[caja=Rojo,above=0.9cm of esc] (ctl) {controlador/controles.js};
+  \draw[flecha] (cfg) -- (fis);
+  \draw[flecha] (fis) -- (app);
+  \draw[flecha] (din) -| (app);
+  \draw[flecha] (app) -- (esc);
+  \draw[flecha] (app) -- (osc);
+  \draw[flecha] (app) -- (pan);
+  \draw[flecha] (ctl) -- node[above,sloped,font=\scriptsize]{actualizar} (est);
+  \draw[flecha,dashed] (est) -- node[left,font=\scriptsize]{notifica} (app);
+  \draw[flecha,dashed] (est.east) -- (esc.north west);
+\end{tikzpicture}
+\caption{Módulos del visualizador. Los controles nunca dibujan: solo modifican el estado.}
+\end{figure}
+
+\begin{itemize}
+  \item \textbf{Módulos UMD}: \archivo{config.js}, \archivo{modelo/fisica.js} y \archivo{modelo/dinamica.js} funcionan tanto en el navegador
+        (como \texttt{window.GeneradorAxial}) como en Node (\texttt{module.exports}); así la prueba de paridad
+        los ejecuta sin navegador.
+  \item \textbf{Sin dependencias de red}: Three.js y OrbitControls están en \archivo{js/vendor/} y se cargan con
+        etiquetas \texttt{<script>} clásicas, de modo que \archivo{index.html} se puede abrir directamente desde
+        el disco (\texttt{file://}) o con el servidor incluido.
+  \item \textbf{Simulación dinámica}: \archivo{modelo/dinamica.js} (clase \texttt{SimulacionDinamica}, espejo exacto
+        de la de Python, Documento~5) integra el rotor, la batería y la temperatura. El usuario fija el
+        \textbf{par motriz}; la velocidad resulta del equilibrio con el rozamiento y el frenado de Lenz. El selector
+        de tiempo (1×, 10×, 50×, 500×) acelera solo las variables lentas; en pausa el tiempo simulado se congela.
+  \item \textbf{Osciloscopio}: muestra una ventana de 0.1 s de tiempo simulado y submuestrea cada cuadro para que
+        la onda no sufra \emph{aliasing} a altas RPM; CH1 dibuja la forma de onda real (no senoidal) del solape
+        imán–bobina. Tiene dos canales: CH1 es el generador y CH2 la
+        salida del inversor, con escala de 50, 100 o 200 V/div según la tensión elegida; si el inversor está
+        apagado o cortado muestra ``APAGADO''.
+  \item \textbf{Estado físico fuera del Observer}: velocidad, SoC y temperatura cambian en cada cuadro, así que viven
+        en \texttt{SimulacionDinamica} y no en el estado observable (evita notificar a todas las vistas 60 veces por
+        segundo); la aplicación pasa cada instante al panel, a la escena y al osciloscopio.
+  \item \textbf{Render físicamente basado}: \archivo{vista/materiales.js} genera un mapa de entorno de estudio (PMREM)
+        y texturas procedurales (contrachapado, capas de impresión, bobinado esmaltado, etiquetas); la escena usa
+        tono ACES, salida sRGB y sombras suaves.
+\end{itemize}
+
+%=====================================================================
+\section{Principios de código limpio aplicados}
+%=====================================================================
+\begin{description}[style=nextline]
+  \item[Nombres del dominio] Las variables llevan el nombre físico y la unidad: \texttt{entrehierro\_m},
+        \texttt{tension\_pico\_v}, \texttt{campo\_medio\_bobina\_t}. Esto elimina comentarios del tipo
+        ``\# en metros'' y evita errores de unidades.
+  \item[Unidades SI dentro, milímetros solo en los bordes] Todo el dominio trabaja en SI; la conversión a milímetros
+        ocurre solo al generar STL o al mostrar valores.
+  \item[Sin números mágicos] Cada constante física o de diseño está en \archivo{configuracion.py} o en
+        \texttt{GeometriaMecanica}.
+  \item[Inmutabilidad y validación temprana] Un diseño inválido falla al construirse con un mensaje claro, no
+        produce resultados absurdos más tarde.
+  \item[Funciones pequeñas y puras] Las leyes físicas no tienen efectos secundarios y aceptan escalares o
+        arreglos, lo que simplifica las pruebas y las gráficas.
+  \item[Responsabilidad única] Calcular, describir piezas, mallar, exportar y presentar están en módulos
+        distintos.
+  \item[Abierto a extensión] Nuevas gráficas, piezas o comandos se agregan sin modificar el código existente.
+\end{description}
+
+%=====================================================================
+\section{Pruebas automáticas}
+%=====================================================================
+Las pruebas (\archivo{tests/}, 67 casos con \texttt{pytest}) verifican física, reglas de diseño y productos
+generados:
+
+\begin{table}[H]
+\centering
+\small
+\begin{tabularx}{\textwidth}{lX}
+\toprule
+Archivo & Qué comprueba\\
+\midrule
+\archivo{test_fisica.py} & Campo en la cara del imán; límite de dipolo a gran distancia; decrecimiento monótono;
+campo medio igual a la integral numérica; frecuencia eléctrica; rectificador sin tensión negativa; rizado.\\
+\archivo{test_dominio.py} & Resistencia interna calculada a mano; ocupación fabricable; rechazo de polos impares,
+imanes solapados, demasiadas espiras y parámetros inválidos; salida DC segura para condensador y LED en todo el
+rango de RPM.\\
+\archivo{test_simulador.py} & $\mathcal{E}=-N\,\dif\Phi/\dif t$ comparando con la derivada numérica; tensión
+proporcional a la velocidad; máxima transferencia con $R_L=R_{int}$; balance de energía y par de Lenz; sin giro
+no hay tensión ni par.\\
+\archivo{test_cad.py} & Cada pieza es un sólido cerrado y su volumen coincide con el analítico; formato STL binario
+correcto; alojamientos en las posiciones del diseño.\\
+\archivo{test_microred.py} & Potencia máxima con $V_{RMS}$; arranque del controlador; límites de corriente y de
+absorción; batería llena sin carga; balance de energía del generador; velocidad de equilibrio (incluida la
+imposible); corte y reconexión con histéresis; corriente del inversor y validaciones de los componentes.\\
+\archivo{test_modelo_realista.py} & Modelo dinámico (Documento~5): solape imán–espira, inductancia, inercia, MPPT y
+rizado, batería de plomo-ácido, inversor, equilibrio de pares, conservación de la energía, frenado de Lenz,
+etapas de carga, histéresis y temperatura.\\
+\archivo{test_reporte_y_cli.py} & Coherencia reporte–simulador; claves válidas como macros \LaTeX; ejecución de
+cada subcomando de la CLI.\\
+\archivo{test_paridad_visualizador.py} & Que \archivo{js/config.js} coincida con \archivo{configuracion.py} y que
+\archivo{fisica.js} dé los mismos resultados que Python (tolerancia $10^{-12}$), y que \archivo{dinamica.js}
+reproduzca \texttt{SimulacionDinamica} paso a paso en cuatro guiones (tolerancia $10^{-9}$). Se omite si no hay Node.\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+%=====================================================================
+\section{Cómo usar el proyecto}
+%=====================================================================
+\begin{paso}{Paso 1 · Instalar dependencias}
+Se necesita \texttt{uv} (gestor de proyectos Python). Desde la raíz del proyecto:
+\begin{lstlisting}[style=consola]
+uv sync
+\end{lstlisting}
+Crea el entorno \archivo{.venv} con NumPy, matplotlib y pytest.
+\end{paso}
+
+\begin{paso}{Paso 2 · Generar gráficas, STL y valores para los documentos}
+\begin{lstlisting}[style=consola]
+uv run generador-axial simular    # resumen + simulacion/graficas/*.png
+uv run generador-axial cad        # cad_3d/stl/*.stl
+uv run generador-axial reporte    # docs/latex/generado/*.tex
+uv run generador-axial todo       # los tres anteriores
+\end{lstlisting}
+Los scripts antiguos siguen funcionando: \texttt{python simulacion/modelo\_analitico.py} y
+\texttt{python cad\_3d/generar\_modelos\_stl.py}.
+\end{paso}
+
+\begin{paso}{Paso 3 · Ejecutar las pruebas}
+\begin{lstlisting}[style=consola]
+uv run pytest
+\end{lstlisting}
+\end{paso}
+
+\begin{paso}{Paso 4 · Abrir el visualizador}
+\begin{lstlisting}[style=consola]
+uv run python visualizador_3d/server.py            # ventana propia de 1360x860
+uv run python visualizador_3d/server.py --ventana 1600x1000
+uv run python visualizador_3d/server.py --en-pestana  # pestaña del navegador
+uv run python visualizador_3d/server.py --puerto 9000 --sin-navegador
+\end{lstlisting}
+El servidor abre el simulador como ventana de aplicación de Edge, Chrome, Chromium o Brave (sin pestañas ni barra
+de direcciones) con un perfil propio, para que se respete el tamaño. Si no encuentra ninguno, abre una ventana del
+navegador predeterminado. Desde una pestaña, el botón ``Ventana aparte'' abre la misma vista en una ventana emergente.
+También se puede abrir \archivo{visualizador_3d/index.html} directamente con doble clic.
+\end{paso}
+
+\begin{paso}{Paso 5 · Recompilar los PDF}
+\begin{lstlisting}[style=consola]
+./docs/compilar_pdf.sh                       # los cinco documentos
+./docs/compilar_pdf.sh 02_memoria_de_calculo # solo uno
+\end{lstlisting}
+El script ejecuta \texttt{generador-axial todo}, compila cada documento dos veces con \texttt{pdflatex} (para el
+índice) en \archivo{docs/latex/build/} y copia los PDF a \archivo{docs/}. Requiere una distribución \TeX\ con
+\texttt{circuitikz}, \texttt{tcolorbox} y \texttt{siunitx}.
+\end{paso}
+
+%=====================================================================
+\section{Cómo extender el proyecto}
+%=====================================================================
+\begin{paso}{Cambiar el diseño (por ejemplo, más espiras o un imán N52)}
+\begin{enumerate}
+  \item Edite \texttt{diseno\_por\_defecto()} en \archivo{src/generador_axial/configuracion.py}.
+  \item Replique el cambio en \archivo{visualizador_3d/js/config.js}.
+  \item Ejecute \texttt{uv run pytest}: si el diseño es infabricable (por ejemplo, la bobina no cabe) fallará con
+        \texttt{ErrorDeDiseno}; si olvidó el paso 2, fallará la prueba de paridad.
+  \item Ejecute \texttt{./docs/compilar\_pdf.sh}: gráficas, STL y todos los números de los PDF se actualizan.
+\end{enumerate}
+\end{paso}
+
+\begin{paso}{Agregar una gráfica}
+Cree una subclase de \texttt{Grafica} en \archivo{graficas/catalogo.py} con \texttt{nombre\_archivo} y
+\texttt{dibujar(figura)}, y añádala a \texttt{graficas\_estandar}.
+\end{paso}
+
+\begin{paso}{Agregar una pieza imprimible}
+Escriba una función que devuelva una \texttt{Pieza} con una \texttt{PlacaConAlojamientos} o un
+\texttt{SolidoDeRevolucion} y añádala a \texttt{catalogo\_de\_piezas}. Si necesita una forma nueva, defina su
+especificación y registre un constructor con \texttt{@construir\_malla.register}. La prueba de hermeticidad la
+cubrirá automáticamente.
+\end{paso}
+
+\begin{paso}{Agregar un subcomando}
+Cree una subclase de \texttt{Comando} con \texttt{nombre}, \texttt{ayuda}, \texttt{configurar} y \texttt{ejecutar},
+y añádala en \texttt{construir\_comandos}.
+\end{paso}
+
+%=====================================================================
+\section{Registro de correcciones}
+%=====================================================================
+\begin{table}[H]
+\centering
+\caption{Principales problemas encontrados en la revisión y su corrección.}
+\small
+\begin{tabularx}{\textwidth}{lXX}
+\toprule
+Área & Antes & Después\\
+\midrule
+Arquitectura & Constantes y fórmulas duplicadas en la simulación, el CAD, el visualizador y los documentos, con valores distintos. & Diseño único en \archivo{configuracion.py}; paridad con JavaScript verificada por prueba; documentos generados.\\
+Física & El flujo se calculaba con el campo en un solo punto. & Campo promediado exactamente sobre el espesor de la bobina, $\bar B=\ValCampoMedioBobina$ T.\\
+Teoría & Citas a secciones de Sadiku que no correspondían al tema. & Citas corregidas (magnetización 8.5–8.6, fem de transformador y de movimiento 9.3, Gauss 7.5).\\
+Electrónica & Condensador de 25 V y resistencia de LED de 1 k$\Omega$ ¼ W, insuficientes a altas RPM. & \ValCapacitanciaMicro\ $\mu$F × \ValTensionNominalCondensador\ V y \ValResistenciaLed\ $\Omega$ ½ W; una prueba verifica la seguridad en todo el rango.\\
+Ensayos & Tabla de valores teóricos escrita a mano e inconsistente con el modelo. & Tabla generada por \texttt{generador-axial reporte}.\\
+CAD & Carrete de una sola pieza (la bobina no se podía extraer); cotas no ligadas al diseño. & Carrete en dos piezas; discos con alojamientos derivados del diseño; mallas cerradas verificadas.\\
+Visualizador & Código monolítico; la pausa no congelaba el tiempo; geometría distinta del diseño; líneas de campo fijas al cambiar el entrehierro; dependencia de CDN. & MVC + Observer; pausa real; geometría coherente con el CAD; líneas reconstruidas; librerías locales; osciloscopio sin \emph{aliasing}.\\
+Gráficas & Curvas superpuestas por coincidencia de escalas (tensión DC y frecuencia). & Frecuencia en un eje secundario superior.\\
+Herramientas & Scripts sueltos sin dependencias declaradas ni pruebas. & Proyecto \texttt{uv} con \archivo{pyproject.toml}, comando \texttt{generador-axial} y 67 pruebas.\\
+Micro-red: potencia & Se usaba $V_{DC}^2/(4R_{int})$, que duplica la potencia disponible. & $P_{max}=V_{RMS}^2/(4R_{int})$ con controlador MPPT y límites de corriente y absorción.\\
+Micro-red: protección & Sin corte por baja tensión: el inversor daba 110\,V con la batería vacía. & Corte al \ValSocCorte\,\% y reconexión al \ValSocReconexion\,\% en Python y JavaScript.\\
+Micro-red: balance & El balance ignoraba el consumo del inversor; constantes fijas (10.5/14.4\,V, 500\,RPM, 110\,V/60\,Hz) repetidas en el código. & Balance completo con velocidad de equilibrio (\ValRpmEquilibrio\,RPM para \ValPotenciaCargaAc\,W); parámetros en \archivo{configuracion.py} y \archivo{config.js}.\\
+Micro-red: documentos & Citas a Sadiku inexistentes (Cap.~13 y 15) y una fórmula de carga distinta de la del código. & Transformador citado en Sec.~8.8 y 9.3; SPWM como teoría de circuitos; fórmulas iguales al modelo.\\
+Micro-red: visualizador & SoC guardado en el estado observable en cada cuadro; la traza de 220\,V se recortaba en el osciloscopio; código muerto (\texttt{CargaAc}). & Clase \texttt{MicroRed} fuera del estado; escala automática de 200\,V/div; código muerto eliminado.\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+\end{document}
