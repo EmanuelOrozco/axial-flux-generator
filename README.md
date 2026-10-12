@@ -37,6 +37,8 @@ teoria_electromagnetica/
     ├── 03_guia_fabricacion.pdf
     ├── 04_arquitectura_software.pdf
     ├── 05_modelo_realista.pdf      # Dinámica, onda real, batería de plomo-ácido, inversor, temperatura
+    ├── 06_presentacion.pdf         # Presentación de 10 minutos con demo en vivo
+    ├── 06_guion_presentacion.md    # Guion cronometrado de la presentación y la demo
     ├── compilar_pdf.sh             # Script de compilación LaTeX
     └── latex/                      # Fuentes y macros LaTeX generadas automáticamente
 ```

@@ -1,0 +1,325 @@
+% Presentación de 10 minutos (incluye la demostración en vivo del simulador).
+% Compilar con: ./docs/compilar_pdf.sh 06_presentacion
+\documentclass[aspectratio=169,11pt,xcolor={dvipsnames,table}]{beamer}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage[spanish,es-nodecimaldot,es-noshorthands,es-tabla]{babel}
+\usepackage{amsmath,amssymb}
+\usepackage{siunitx}
+\sisetup{output-decimal-marker={.},group-digits=false,per-mode=symbol}
+\usepackage{booktabs}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,calc}
+
+\graphicspath{{../../simulacion/graficas/}{figuras/}}
+\input{generado/valores.tex}
+
+% ---------------------------------------------------------------- estilo
+\definecolor{Azul}{HTML}{0D47A1}
+\definecolor{Cian}{HTML}{00838F}
+\definecolor{Naranja}{HTML}{E65100}
+\definecolor{Rojo}{HTML}{C62828}
+\definecolor{Verde}{HTML}{2E7D32}
+\definecolor{Gris}{HTML}{455A64}
+
+\usefonttheme{professionalfonts}
+\setbeamercolor{frametitle}{fg=Azul}
+\setbeamerfont{frametitle}{series=\bfseries,size=\Large}
+\setbeamercolor{structure}{fg=Azul}
+\setbeamercolor{block title}{bg=Azul,fg=white}
+\setbeamercolor{block body}{bg=Azul!6}
+\setbeamercolor{block title alerted}{bg=Naranja,fg=white}
+\setbeamercolor{block body alerted}{bg=Naranja!7}
+\setbeamercolor{block title example}{bg=Verde,fg=white}
+\setbeamercolor{block body example}{bg=Verde!7}
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{itemize items}[circle]
+\setbeamertemplate{blocks}[rounded]
+\setbeamertemplate{footline}{%
+  \leavevmode\hbox to\paperwidth{%
+    \hspace{1em}{\color{Gris}\tiny Generador de flujo axial con imanes NdFeB}\hfill
+    {\color{Gris}\tiny\insertframenumber/\inserttotalframenumber}\hspace{1em}}%
+  \vspace{0.6em}}
+
+\newcommand{\dato}[2]{{\small\color{Gris}#1}\\[-1pt]{\Large\bfseries\color{Azul}#2}}
+
+\title{Generador de flujo axial con imanes NdFeB}
+\subtitle{Del electromagnetismo de Sadiku a una micro-red simulada en tiempo real}
+\date{}
+
+\begin{document}
+
+% ================================================================ 1. Portada  (0:15)
+\begin{frame}[plain]
+  \begin{tikzpicture}[remember picture,overlay]
+    \fill[Azul] (current page.north west) rectangle ([yshift=-4.4cm]current page.north east);
+    \node[anchor=north west,text=white,font=\sffamily\bfseries\LARGE,text width=10cm,align=left]
+      at ([xshift=1cm,yshift=-1.2cm]current page.north west) {\inserttitle};
+    \node[anchor=north west,text=white!85!Azul,font=\sffamily\normalsize,text width=10cm,align=left]
+      at ([xshift=1cm,yshift=-2.9cm]current page.north west) {\insertsubtitle};
+    \begin{scope}[shift={([xshift=-2.6cm,yshift=-2.2cm]current page.north east)},scale=0.5]
+      \foreach \i in {0,...,7} {
+        \pgfmathsetmacro{\ang}{45*\i}
+        \ifodd\i \def\col{Azul!40}\def\pol{S}\else \def\col{Rojo!80}\def\pol{N}\fi
+        \fill[\col] (\ang:2.2) circle (0.55);
+        \node[white,font=\bfseries\small] at (\ang:2.2) {\pol};
+      }
+      \draw[white,line width=1pt] (0,0) circle (3.0);
+      \fill[white!70] (0,0) circle (0.35);
+    \end{scope}
+  \end{tikzpicture}
+  \vspace{4.2cm}
+  \begin{columns}[T]
+    \column{0.5\textwidth}
+      \small Teoría Electromagnética\\[2pt]
+      \color{Gris}\footnotesize Basado en M.\,N.\,O. Sadiku, \emph{Elementos de Electromagnetismo}, cap.~7--9
+    \column{0.42\textwidth}
+      \footnotesize\color{Gris}
+      Modelo en Python \(\cdot\) Visualizador 3D en Three.js\\
+      Piezas imprimibles en 3D \(\cdot\) 5 documentos técnicos
+  \end{columns}
+\end{frame}
+
+% ================================================================ 2. Sistema  (0:45)
+\begin{frame}{¿Qué construimos?}
+  \centering
+  \begin{tikzpicture}[
+      caja/.style={draw=Azul,fill=Azul!6,rounded corners=3pt,minimum height=1.05cm,
+                   text width=1.75cm,align=center,font=\scriptsize},
+      flecha/.style={-{Stealth[length=2.2mm]},thick,Gris},
+      node distance=0.42cm]
+    \node[caja,draw=Naranja,fill=Naranja!8] (mano) {Par motriz\\mano / motor};
+    \node[caja,right=of mano] (rotor) {Rotor\\\ValPolos{} imanes \ValGradoIman};
+    \node[caja,right=of rotor] (bob) {\ValBobinas{} bobinas\\sin núcleo};
+    \node[caja,right=of bob] (puente) {Puente\\rectificador};
+    \node[caja,right=of puente] (mppt) {Controlador\\MPPT};
+    \node[caja,right=of mppt,draw=Verde,fill=Verde!8] (bat) {Batería\\\SI{12}{V} / \SI{7}{Ah}};
+    \node[caja,below=0.9cm of bat] (inv) {Inversor\\\SI{110}{}/\SI{220}{V} \SI{60}{Hz}};
+    \node[caja,left=of inv,draw=Naranja,fill=Naranja!8] (foco) {Bombillo\\carga AC};
+    \draw[flecha] (mano) -- (rotor);
+    \draw[flecha] (rotor) -- node[above,font=\tiny]{\(\Phi(t)\)} (bob);
+    \draw[flecha] (bob) -- node[above,font=\tiny]{AC} (puente);
+    \draw[flecha] (puente) -- node[above,font=\tiny]{DC} (mppt);
+    \draw[flecha] (mppt) -- (bat);
+    \draw[flecha] (bat) -- (inv);
+    \draw[flecha] (inv) -- (foco);
+    \draw[flecha,Rojo,dashed] (bob.south) -- ++(0,-0.5) -- node[below,font=\tiny,text=Rojo]
+      {par de Lenz: frena el rotor} ([yshift=-0.5cm]rotor.south) -- (rotor.south);
+  \end{tikzpicture}
+
+  \vspace{0.5cm}
+  \begin{columns}[T]
+    \column{0.31\textwidth}
+      \begin{block}{Objetivo}\small
+        Convertir energía mecánica en eléctrica aplicando la ley de Faraday.
+      \end{block}
+    \column{0.31\textwidth}
+      \begin{block}{Diseño}\small
+        Flujo axial, bobinas sin hierro y piezas impresas en PLA.
+      \end{block}
+    \column{0.31\textwidth}
+      \begin{block}{Simulación}\small
+        Física completa del sistema, idéntica en Python y en el navegador.
+      \end{block}
+  \end{columns}
+\end{frame}
+
+% ================================================================ 3. Física  (0:50)
+\begin{frame}{La física: campo, flujo, Faraday y Lenz}
+  \begin{columns}[c]
+    \column{0.52\textwidth}
+      \small
+      \textbf{Campo en el eje de un imán cilíndrico}
+      \[
+        B_z(z)=\frac{B_r}{2}\left[\frac{z+L}{\sqrt{(z+L)^2+R^2}}-\frac{z}{\sqrt{z^2+R^2}}\right]
+      \]
+      \textbf{Ley de Faraday} (\(N_t=\ValEspirasTotales\) espiras en serie)
+      \[
+        \mathcal{E}(t)=-N_t\,\frac{\mathrm{d}\Phi}{\mathrm{d}t}
+        \qquad
+        f_e=\frac{p}{2}\,\frac{n}{60}
+      \]
+      \textbf{Ley de Lenz}: la corriente se opone al cambio de flujo
+      \[
+        \tau_{\text{Lenz}}=\frac{P_{\text{em}}}{\omega_m}
+      \]
+    \column{0.44\textwidth}
+      \includegraphics[width=\linewidth]{02_flujo_y_voltaje_inducido_faraday.png}
+      \vspace{2pt}
+      \begin{center}\footnotesize
+        \begin{tabular}{@{}ll@{}}
+          \(B\) en la cara del imán & \SI{\ValCampoCaraIman}{T}\\
+          \(B\) medio en la bobina & \SI{\ValCampoMedioBobina}{T}\\
+          Flujo máximo por espira & \SI{\ValFlujoMaximoMicro}{\micro Wb}
+        \end{tabular}
+      \end{center}
+  \end{columns}
+\end{frame}
+
+% ================================================================ 4. Diseño  (0:40)
+\begin{frame}{El diseño del generador}
+  \begin{columns}[c]
+    \column{0.42\textwidth}
+      \footnotesize
+      \begin{tabular}{@{}lr@{}}
+        \toprule
+        Imanes & \ValPolos{} \(\times\) \SI{\ValDiametroIman}{}\(\times\)\SI{\ValEspesorIman}{mm}\\
+        Remanencia \(B_r\) & \SI{\ValBr}{T}\\
+        Bobinas & \ValBobinas{} \(\times\) \ValEspiras{} espiras\\
+        Alambre & AWG \ValCalibreAWG{}, \SI{\ValLongitudAlambreTotal}{m}\\
+        Entrehierro & \SI{\ValEntrehierro}{mm}\\
+        Resistencia interna & \SI{\ValResistenciaInterna}{\ohm}\\
+        Inductancia (Wheeler) & \SI{\ValInductanciaTotalMili}{mH}\\
+        Inercia del rotor & \SI{\ValInerciaRotor e-4}{kg.m^2}\\
+        \bottomrule
+      \end{tabular}
+
+      \vspace{8pt}
+      \begin{exampleblock}{A \ValRpmReferencia{} RPM}\footnotesize
+        \(f_e=\SI{\ValFrecuenciaRef}{Hz}\), \(V_{\text{pico}}=\SI{\ValTensionPicoRef}{V}\),
+        \(V_{\text{rms}}=\SI{\ValTensionRmsRef}{V}\)
+      \end{exampleblock}
+    \column{0.54\textwidth}
+      \includegraphics[width=\linewidth]{03_voltaje_rms_vs_rpm.png}
+      \\[-2pt]{\scriptsize\color{Gris} La tensión crece linealmente con la velocidad: \(\mathcal{E}\propto\omega\).}
+  \end{columns}
+\end{frame}
+
+% ================================================================ 5. Modelo realista  (0:50)
+\begin{frame}{Del modelo ideal al modelo realista}
+  \begin{columns}[c]
+    \column{0.5\textwidth}
+      \includegraphics[width=\linewidth]{09_onda_real_vs_senoidal.png}
+    \column{0.47\textwidth}
+      \small
+      \begin{itemize}
+        \item \textbf{Onda real}: solape imán--espira; no es senoidal (factor de cresta \ValFactorCresta).
+        \item \textbf{Rotor}: \(J\,\dot\omega=\tau_m-\tau_{\text{Lenz}}-\tau_{\text{fricción}}\).
+        \item \textbf{Electrónica}: MPPT desde \SI{\ValControladorArranque}{V}, absorción \SI{\ValControladorAbsorcion}{V},
+              flotación \SI{\ValControladorFlotacion}{V}, máx.\ \SI{\ValControladorCorrienteMax}{A}.
+        \item \textbf{Batería plomo-ácido}: Thevenin, Peukert y gasificación.
+        \item \textbf{Inversor}: \SI{\ValInversorVacio}{W} en vacío; corte a \SI{\ValInversorCorte}{V}, reconexión a \SI{\ValInversorReconexion}{V}.
+        \item \textbf{Térmico}: \(R_{\text{Cu}}\) sube y \(B_r\) baja con la temperatura.
+      \end{itemize}
+  \end{columns}
+\end{frame}
+
+% ================================================================ 6. Micro-red  (0:40)
+\begin{frame}{Dinámica y carga de la batería}
+  \begin{columns}[T]
+    \column{0.49\textwidth}
+      \includegraphics[width=\linewidth]{10_arranque_impulso_y_frenado.png}
+      \\{\scriptsize\color{Gris}Impulso de \SI{\ValParImpulso}{N.m}: pico de \ValRpmPicoImpulso{} RPM y parada en \SI{\ValTiempoParadaImpulso}{s}.}
+    \column{0.49\textwidth}
+      \includegraphics[width=\linewidth]{12_ciclo_de_carga_bateria.png}
+      \\{\scriptsize\color{Gris}MPPT \(\to\) absorción en \SI{\ValHorasHastaAbsorcion}{h} \(\to\) flotación en \SI{\ValHorasHastaFlotacion}{h}.}
+  \end{columns}
+\end{frame}
+
+% ================================================================ 7. Software  (0:30)
+\begin{frame}{Arquitectura del software}
+  \centering
+  \begin{tikzpicture}[
+      capa/.style={draw=Azul,fill=Azul!6,rounded corners=3pt,minimum height=0.8cm,
+                   minimum width=2.4cm,align=center,font=\scriptsize},
+      flecha/.style={-{Stealth[length=2mm]},thick,Gris},
+      node distance=0.35cm]
+    \node[capa] (pres) {presentación\\CLI};
+    \node[capa,right=of pres] (infra) {infraestructura\\CAD, gráficas, LaTeX};
+    \node[capa,right=of infra] (app) {aplicación\\simuladores};
+    \node[capa,right=of app,draw=Verde,fill=Verde!8] (dom) {dominio\\física pura};
+    \draw[flecha] (pres) -- (infra);
+    \draw[flecha] (infra) -- (app);
+    \draw[flecha] (app) -- (dom);
+    \node[capa,draw=Naranja,fill=Naranja!8,minimum width=6.2cm,anchor=north]
+      (js) at ([yshift=-1.0cm]$(app.south)!0.5!(dom.south)$)
+      {Visualizador Three.js: \texttt{dinamica.js}, espejo exacto del modelo};
+    \draw[flecha,<->,Naranja] (dom.south) -- node[right,font=\tiny,text=Naranja]
+      {paridad \(10^{-9}\)} (dom.south |- js.north);
+  \end{tikzpicture}
+
+  \vspace{0.45cm}
+  \begin{columns}[T]
+    \column{0.23\textwidth}\centering\dato{Pruebas unitarias}{109}
+    \column{0.23\textwidth}\centering\dato{Pruebas E2E}{29}
+    \column{0.23\textwidth}\centering\dato{Gráficas generadas}{12}
+    \column{0.23\textwidth}\centering\dato{Piezas STL}{4}
+  \end{columns}
+  \vspace{4pt}
+  \begin{center}\scriptsize\color{Gris}
+    Una única fuente de verdad (\texttt{configuracion.py}) alimenta el modelo, las piezas 3D, las gráficas y estos documentos.
+  \end{center}
+\end{frame}
+
+% ================================================================ 8. Demo  (3:30)
+\begin{frame}{Demostración en vivo}
+  \begin{columns}[c]
+    \column{0.56\textwidth}
+      \includegraphics[width=\linewidth]{simulador_general.png}
+      \\{\tiny\color{Gris}\texttt{uv run python visualizador\_3d/server.py}}
+    \column{0.41\textwidth}
+      \scriptsize
+      \begin{enumerate}
+        \setlength{\itemsep}{1pt}
+        \item \textbf{Faraday}: par \SI{0.05}{N.m}, onda real en el osciloscopio.
+        \item \textbf{Lenz}: par a 0 e \emph{Impulso}; el rotor frena solo.
+        \item \textbf{Régimen}: par \SI{\ValParReferencia}{N.m} \(\to\) \(\approx\)\ValRpmRegimenRef{} RPM.
+        \item \textbf{Micro-red}: carga \SI{15}{W}; la batería se descarga.
+        \item \textbf{Carga}: inversor apagado, par \SI{\ValParMaximoMotriz}{N.m} y tiempo \(500\times\); el SoC sube.
+        \item \textbf{Diseño}: entrehierro y condensador en \emph{Ajustes}.
+        \item \textbf{Despiece} y cámaras.
+      \end{enumerate}
+  \end{columns}
+\end{frame}
+
+% ================================================================ 9. Resultados  (0:40)
+\begin{frame}{Resultados del modelo realista}
+  \begin{columns}[c]
+    \column{0.5\textwidth}
+      \includegraphics[width=\linewidth]{11_regimen_vs_par_motriz.png}
+    \column{0.46\textwidth}
+      \footnotesize
+      \begin{tabular}{@{}lr@{}}
+        \toprule
+        \multicolumn{2}{@{}l}{\textbf{Par motriz de \SI{\ValParReferencia}{N.m}}}\\
+        \midrule
+        Velocidad de régimen & \ValRpmRegimenRef{} RPM\\
+        Potencia en el eje & \SI{\ValPotenciaEjeRef}{W}\\
+        Potencia a la batería & \SI{\ValPotenciaBateriaRef}{W}\\
+        Eficiencia global & \SI{\ValEficienciaRef}{\percent}\\
+        Temperatura de bobinas & \SI{\ValTemperaturaRegimenRef}{\celsius}\\
+        \midrule
+        \multicolumn{2}{@{}l}{\textbf{Par máximo de \SI{\ValParMaximoMotriz}{N.m}}}\\
+        \midrule
+        Velocidad & \ValRpmParMaximo{} RPM\\
+        Potencia a la batería & \SI{\ValPotenciaBateriaParMaximo}{W}\\
+        \bottomrule
+      \end{tabular}
+  \end{columns}
+\end{frame}
+
+% ================================================================ 10. Conclusiones  (0:20)
+\begin{frame}{Conclusiones}
+  \begin{columns}[T]
+    \column{0.6\textwidth}
+      \begin{itemize}
+        \item La ley de Faraday explica la tensión generada; la ley de Lenz explica por qué cuesta girar el rotor.
+        \item Sin núcleo de hierro, el generador entrega pocos vatios: sirve para cargar la batería
+              despacio, no para alimentar la carga AC de forma continua.
+        \item El modelo realista cambia los números: onda no senoidal, umbral del MPPT y pérdidas térmicas.
+        \item El simulador reproduce el mismo modelo verificado en Python, por lo que la demo muestra resultados calculados.
+      \end{itemize}
+    \column{0.36\textwidth}
+      \begin{alertblock}{Mejoras posibles}\small
+        Más espiras o un estator doble, imanes N52 y un entrehierro menor.
+      \end{alertblock}
+      \vspace{0.4cm}
+      \begin{center}
+        {\Large\bfseries\color{Azul}¿Preguntas?}\\[4pt]
+        {\tiny\color{Gris}github.com/EmanuelOrozco/axial-flux-generator}
+      \end{center}
+  \end{columns}
+\end{frame}
+
+\end{document}

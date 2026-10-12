@@ -15,7 +15,7 @@ uv run generador-axial todo > /dev/null
 
 documentos=("$@")
 if [ ${#documentos[@]} -eq 0 ]; then
-  documentos=(01_marco_teorico 02_memoria_de_calculo 03_guia_fabricacion 04_arquitectura_software 05_modelo_realista)
+  documentos=(01_marco_teorico 02_memoria_de_calculo 03_guia_fabricacion 04_arquitectura_software 05_modelo_realista 06_presentacion)
 fi
 
 mkdir -p "$COMPILACION"
