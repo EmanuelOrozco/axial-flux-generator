@@ -10,6 +10,12 @@ RAIZ="$(dirname "$DOCS")"
 FUENTES="$DOCS/latex"
 COMPILACION="$FUENTES/build"
 
+# Fecha fija en los metadatos: recompilar sin cambios en las fuentes produce PDF idénticos.
+if [ -z "${SOURCE_DATE_EPOCH:-}" ]; then
+  SOURCE_DATE_EPOCH="$(git -C "$RAIZ" log --max-parents=0 --format=%ct 2>/dev/null | tail -1 || true)"
+fi
+if [ -n "$SOURCE_DATE_EPOCH" ]; then export SOURCE_DATE_EPOCH; else unset SOURCE_DATE_EPOCH; fi
+
 cd "$RAIZ"
 uv run generador-axial todo > /dev/null
 
